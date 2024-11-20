@@ -241,6 +241,8 @@ export const FileSystemProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     )
   }, [])
 
+  
+
   const updateFileContent = useCallback((fileId: string, newContent: any) => {
     setFiles(prev => ({
       ...prev,

@@ -1,9 +1,17 @@
 'use client';
 
 import { useEffect, useState } from "react";
+import { LexicalComposer } from "@lexical/react/LexicalComposer";
+import { ContentEditable } from "@lexical/react/LexicalContentEditable";
+import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary';
+import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
+import { AutoFocusPlugin } from "@lexical/react/LexicalAutoFocusPlugin";
+import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
+import { ListPlugin } from "@lexical/react/LexicalListPlugin";
+import { MarkdownShortcutPlugin } from "@lexical/react/LexicalMarkdownShortcutPlugin";
+import { TabIndentationPlugin } from "@lexical/react/LexicalTabIndentationPlugin";
+import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
 
-
-/* Lexical Design System */
 import { HeadingNode, QuoteNode } from "@lexical/rich-text";
 import { TableCellNode, TableNode, TableRowNode } from "@lexical/table";
 import { ListItemNode, ListNode } from "@lexical/list";
@@ -11,56 +19,26 @@ import { CodeHighlightNode, CodeNode } from "@lexical/code";
 import { AutoLinkNode, LinkNode } from "@lexical/link";
 import { TRANSFORMERS } from "@lexical/markdown";
 
-/* Lexical Plugins Local */
 import TreeViewPlugin from "@/app/plugins/TreeViewPlugin";
 import ToolbarPlugin from "@/app/plugins/ToolbarPlugin";
 import AutoLinkPlugin from "@/app/plugins/AutoLinkPlugin";
 import CodeHighlightPlugin from "@/app/plugins/CodeHighlightPlugin";
 
-/* Lexical Plugins Remote */
-import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
-import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
-import { AutoFocusPlugin } from "@lexical/react/LexicalAutoFocusPlugin";
-import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
-import { ListPlugin } from "@lexical/react/LexicalListPlugin";
-import { MarkdownShortcutPlugin } from "@lexical/react/LexicalMarkdownShortcutPlugin";
-import { TabIndentationPlugin } from "@lexical/react/LexicalTabIndentationPlugin";
-
-/* Lexical Others */
-import { LexicalComposer } from "@lexical/react/LexicalComposer";
-import { ContentEditable } from "@lexical/react/LexicalContentEditable";
-import {LexicalErrorBoundary} from '@lexical/react/LexicalErrorBoundary';
-import { EditorState } from "lexical";
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
-
 import ExampleTheme from "@/app/themes/ExampleTheme";
-
-/* Lexical Texts */
-import { generatePaperCut } from "./text-papercut";
-import { $createParagraphNode, $createTextNode, $getRoot } from "lexical";
-import { $createListItemNode, $createListNode } from "@lexical/list";
-
-/* Data */
-import { useFileSystem } from "@/app/contexts/FileSystemContext";
+import { WordNode } from "./nodes/WordNode";
+import { SegmentNode } from "./nodes/SegmentNode";
+import EditorContent from "./editorcontent";
 
 function Placeholder() {
     return <div className="editor-placeholder">Enter some rich text...</div>;
 }
 
-interface EditorProps {
-    selectedFileContent: string | null;
-}
-
 const editorConfig = {
-    // The editor theme
     theme: ExampleTheme,
     namespace: "daily-standup-editor",
-    editorState: generatePaperCut,
-    // Handling of errors during update
     onError(error: unknown) {
-        throw error;
+        console.error(error);
     },
-    // Any custom nodes go here
     nodes: [
         HeadingNode,
         ListNode,
@@ -72,47 +50,11 @@ const editorConfig = {
         TableCellNode,
         TableRowNode,
         AutoLinkNode,
-        LinkNode
+        LinkNode,
+        WordNode,
+        SegmentNode
     ],
 };
-
-function EditorContent() {
-    const [editor] = useLexicalComposerContext();
-    const { files, selectedItems } = useFileSystem();
-
-    useEffect(() => {
-        if (selectedItems.length > 0) {
-            const selectedFileId = selectedItems[0]; // Assuming single selection
-            const selectedFile = files[selectedFileId];
-            if (selectedFile && selectedFile.type === 'file') {
-                console.log("EditorContent: Selected file changed", selectedFile.name);
-                try {
-                    const parsedContent = JSON.parse(selectedFile.content);
-                    console.log("EditorContent: Parsed content", parsedContent);
-                    let textContent = '';
-                    if (parsedContent.transcript && parsedContent.transcript.segments) {
-                        textContent = parsedContent.transcript.segments
-                            .map((segment: any) => segment.text)
-                            .join('\n');
-                    } else {
-                        textContent = JSON.stringify(parsedContent, null, 2);
-                    }
-                    console.log("EditorContent: Updating editor content");
-                    editor.update(() => {
-                        const root = $getRoot();
-                        root.clear();
-                        root.append($createParagraphNode().append($createTextNode(textContent)));
-                        console.log("EditorContent: Editor content updated");
-                    });
-                } catch (error) {
-                    console.error('EditorContent: Error parsing file content:', error);
-                }
-            }
-        }
-    }, [editor, files, selectedItems]);
-
-    return null;
-}
 
 export function Editor(): JSX.Element | null {
     const [isMounted, setIsMounted] = useState(false);

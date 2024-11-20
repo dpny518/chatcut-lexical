@@ -4,6 +4,8 @@ export interface Word {
     word: string;
     word_id: string;
     word_index: string;
+    start: number;
+    end: number;
   }
   
   export interface Segment {
@@ -37,4 +39,8 @@ export interface Word {
         processed_path: string;
       };
       processed_data: ProcessedData;
+    }
+
+   export interface ParsedContent {
+      transcript: Transcript;
     }
