@@ -6,6 +6,8 @@ import { useFileSystem, FileSystemItem, FileType } from '@/app/contexts/FileSyst
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
+import { Editor } from '@/app/text-editor'
+
 const FileIcon: React.FC<{ type: FileType }> = ({ type }) => {
   switch (type) {
     case 'folder': return <Folder className="w-4 h-4" />
@@ -45,6 +47,10 @@ const FileSystemTree: React.FC<{ parentId: string | null }> = ({ parentId }) => 
     e.dataTransfer.effectAllowed = 'move'
   }
 
+  const handleItemClick = (itemId: string) => {
+    console.log("FileSystemTree: Item clicked", itemId);
+    toggleItemSelection(itemId);
+  }
   const handleDragOver = (e: DragEvent<HTMLDivElement>, targetId: string, type: FileType) => {
     e.preventDefault()
     e.stopPropagation()
@@ -130,7 +136,7 @@ const FileSystemTree: React.FC<{ parentId: string | null }> = ({ parentId }) => 
       onDragOver={(e) => handleDragOver(e, item.id, item.type)}
       onDragLeave={handleDragLeave}
       onDrop={(e) => handleDrop(e, item.id)}
-      onClick={() => toggleItemSelection(item.id)}
+      onClick={() => handleItemClick(item.id)}
     >
       {item.type === 'folder' && (
         <span onClick={(e) => toggleFolder(item.id, e)}>
@@ -201,12 +207,14 @@ const FileSystemTree: React.FC<{ parentId: string | null }> = ({ parentId }) => 
 }
 
 export function AppSidebar() {
-  const { addFile } = useFileSystem()
+  const { addFile } = useFileSystem();
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
+      console.log("AppSidebar: File upload started", file.name);
       await addFile(file, null) // null indicates root level
+      console.log("AppSidebar: File upload completed", file.name);
     }
   }
 
@@ -214,7 +222,10 @@ export function AppSidebar() {
     <div className="w-64 h-screen overflow-auto bg-white border-r border-gray-200">
       <div className="p-4">
         <Button 
-          onClick={() => document.getElementById('file-upload')?.click()} 
+          onClick={() => {
+            console.log("AppSidebar: Upload button clicked");
+            document.getElementById('file-upload')?.click();
+          }} 
           className="w-full mb-4"
         >
           Upload Files
