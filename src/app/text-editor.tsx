@@ -27,6 +27,7 @@ import CodeHighlightPlugin from "@/app/plugins/CodeHighlightPlugin";
 import ExampleTheme from "@/app/themes/ExampleTheme";
 import { WordNode } from "./nodes/WordNode";
 import { SegmentNode } from "./nodes/SegmentNode";
+import { SpeakerNode } from "./nodes/SpeakerNode";
 import EditorContent from "./editorcontent";
 
 function Placeholder() {
@@ -51,8 +52,40 @@ const editorConfig = {
         TableRowNode,
         AutoLinkNode,
         LinkNode,
-        WordNode,
-        SegmentNode
+        {
+            replace: WordNode,
+            with: (node: WordNode) => {
+                return new WordNode(
+                    node.__text,
+                    node.__startTime,
+                    node.__endTime,
+                    node.__segmentId,
+                    node.__speaker,
+                    node.__fileId,
+                    node.__wordIndex,
+                    node.__key
+                );
+            },
+        },
+        {
+            replace: SegmentNode,
+            with: (node: SegmentNode) => {
+                return new SegmentNode(
+                    node.__startTime,
+                    node.__endTime,
+                    node.__segmentId,
+                    node.__speaker,
+                    node.__fileId,
+                    node.__key
+                );
+            },
+        },
+        {
+            replace: SpeakerNode,
+            with: (node: SpeakerNode) => {
+                return new SpeakerNode(node.__speaker, node.__key);
+            },
+        },
     ],
 };
 
