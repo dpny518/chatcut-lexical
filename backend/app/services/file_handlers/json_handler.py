@@ -2,6 +2,26 @@ import json
 import uuid
 from datetime import datetime
 
+def hyphenate_speaker_name(name):
+    """
+    Replace spaces in speaker names with hyphens.
+    Also handles cases with colons and other potential formatting.
+    
+    Args:
+        name (str): Original speaker name
+    
+    Returns:
+        str: Speaker name with spaces replaced by hyphens
+    """
+    if not name:
+        return name
+    
+    # Remove trailing colon if present
+    name = name.rstrip(':')
+    
+    # Replace spaces with hyphens
+    return name.replace(' ', '-')
+
 async def parse(content):
     try:
         data = json.loads(content)
@@ -14,12 +34,15 @@ async def parse(content):
             segment = item['segment']
             words = item['words']
             
+            # Hyphenate speaker name
+            speaker = hyphenate_speaker_name(segment['speaker'])
+            
             segments.append({
                 "index": index,
                 "start_time": segment['start'],
                 "end_time": segment['end'],
                 "text": segment['text'],
-                "speaker": segment['speaker'],
+                "speaker": speaker,
                 "words": [
                     {
                         "start": word['start'],

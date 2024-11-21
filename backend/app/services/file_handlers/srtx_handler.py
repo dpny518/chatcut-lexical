@@ -4,6 +4,26 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+def hyphenate_speaker_name(name):
+    """
+    Replace spaces in speaker names with hyphens.
+    Also handles cases with colons and other potential formatting.
+    
+    Args:
+        name (str): Original speaker name
+    
+    Returns:
+        str: Speaker name with spaces replaced by hyphens
+    """
+    if not name:
+        return name
+    
+    # Remove trailing colon if present
+    name = name.rstrip(':')
+    
+    # Replace spaces with hyphens
+    return name.replace(' ', '-')
+
 def parse_time(time_str):
     hours, minutes, seconds_ms = time_str.split(':')
     seconds, milliseconds = seconds_ms.split(',')
@@ -31,6 +51,9 @@ async def parse(content):
         index, start_time, end_time, speaker, text = match
         start = parse_time(start_time)
         end = parse_time(end_time)
+        
+        # Hyphenate speaker name
+        speaker = hyphenate_speaker_name(speaker)
         
         words = text.split()
         word_list = []

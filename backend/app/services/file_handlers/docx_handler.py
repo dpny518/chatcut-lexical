@@ -33,11 +33,31 @@ def clean_text(text):
     text = ' '.join(text.split())
     return text.strip()
 
+def hyphenate_speaker_name(name):
+    """
+    Replace spaces in speaker names with hyphens.
+    Also handles cases with colons and other potential formatting.
+    
+    Args:
+        name (str): Original speaker name
+    
+    Returns:
+        str: Speaker name with spaces replaced by hyphens
+    """
+    if not name:
+        return name
+    
+    # Remove trailing colon if present
+    name = name.rstrip(':')
+    
+    # Replace spaces with hyphens
+    return name.replace(' ', '-')
+
 def extract_speaker_and_text(line):
     """Extract speaker and text from a line."""
     speaker_match = re.match(r'\*\*([^*]+)\*\*:?\s*(.*)', line)
     if speaker_match:
-        speaker = speaker_match.group(1).strip()
+        speaker = hyphenate_speaker_name(speaker_match.group(1).strip())
         text = speaker_match.group(2).strip()
         return speaker, text
     return None, None
