@@ -14,6 +14,7 @@ import { CopyPastePlugin } from '@/app/plugins/CopyPastePlugin';
 import { WordHoverPlugin } from '@/app/plugins/WordHoverPlugin';
 import { EditRestrictionPlugin } from '@/app/plugins/EditRestrictionPlugin';
 import PaperCutToolbarPlugin from '@/app/plugins/PaperCutToolbarPlugin'
+
 const editorConfig = {
   namespace: 'PaperCutEditor',
   onError: (error: Error) => console.error(error),
@@ -44,20 +45,25 @@ function LexicalEditorComponent({ initialState, onChange }: LexicalEditorProps) 
     <LexicalComposer initialConfig={memoizedEditorConfig}>
       <div className="editor-container">
         <PaperCutToolbarPlugin />
-        <RichTextPlugin
-          contentEditable={<ContentEditable className="editor-input" />}
-          placeholder={<div className="editor-placeholder">Enter some text...</div>}
-          ErrorBoundary={LexicalErrorBoundary}
-        />
-        <HistoryPlugin />
-        <CopyPastePlugin />
-        <OnChangePlugin onChange={handleChange} />
-        <WordHoverPlugin />
-        <EditRestrictionPlugin />
+        <div className="editor-inner">
+          <RichTextPlugin
+            contentEditable={<ContentEditable className="editor-input" />}
+            placeholder={<Placeholder />}
+            ErrorBoundary={LexicalErrorBoundary}
+          />
+          <HistoryPlugin />
+          <OnChangePlugin onChange={handleChange} />
+          <CopyPastePlugin />
+          <WordHoverPlugin />
+          <EditRestrictionPlugin />
+        </div>
       </div>
     </LexicalComposer>
   );
 }
 
+function Placeholder() {
+  return <div className="editor-placeholder">Paste some transcript content...</div>;
+}
 
 export const LexicalEditor = React.memo(LexicalEditorComponent);
