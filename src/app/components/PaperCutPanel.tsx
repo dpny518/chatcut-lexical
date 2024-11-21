@@ -1,6 +1,19 @@
 // src/app/components/PaperCutPanel.tsx
-import React, { useState } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import React, { useState, useCallback } from 'react';
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import { LexicalEditor } from './LexicalEditor';
 
 type PaperCutTab = {
@@ -15,48 +28,60 @@ export function PaperCutPanel() {
   ]);
   const [activeTab, setActiveTab] = useState('1');
 
-  const handleTabNameChange = (id: string, newName: string) => {
-    setTabs(tabs.map(tab => 
+  const handleTabNameChange = useCallback((id: string, newName: string) => {
+    setTabs(prevTabs => prevTabs.map(tab => 
       tab.id === id ? { ...tab, name: newName } : tab
     ));
-  };
+  }, []);
 
-  const handleContentChange = (id: string, newContent: string) => {
-    setTabs(tabs.map(tab => 
+  const handleContentChange = useCallback((id: string, newContent: string) => {
+    setTabs(prevTabs => prevTabs.map(tab => 
       tab.id === id ? { ...tab, content: newContent } : tab
     ));
-  };
+  }, []);
 
-  const addNewTab = () => {
-    const newId = (parseInt(tabs[tabs.length - 1].id) + 1).toString();
-    setTabs([...tabs, { id: newId, name: `PaperCut ${newId}`, content: '' }]);
-    setActiveTab(newId);
-  };
+  const addNewTab = useCallback(() => {
+    setTabs(prevTabs => {
+      const newId = (parseInt(prevTabs[prevTabs.length - 1].id) + 1).toString();
+      const newTab = { id: newId, name: `PaperCut ${newId}`, content: '' };
+      setActiveTab(newId);
+      return [...prevTabs, newTab];
+    });
+  }, []);
 
   return (
-    <div className="papercut-panel">
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <div className="flex justify-between items-center mb-4">
         <TabsList>
           {tabs.map(tab => (
             <TabsTrigger key={tab.id} value={tab.id}>
-              <input
-                value={tab.name}
-                onChange={(e) => handleTabNameChange(tab.id, e.target.value)}
-                onClick={(e) => e.stopPropagation()}
-              />
+              {tab.name}
             </TabsTrigger>
           ))}
-          <button onClick={addNewTab}>+</button>
         </TabsList>
-        {tabs.map(tab => (
-          <TabsContent key={tab.id} value={tab.id}>
-            <LexicalEditor
-              content={tab.content}
-              onChange={(newContent) => handleContentChange(tab.id, newContent)}
-            />
-          </TabsContent>
-        ))}
-      </Tabs>
-    </div>
+        <Button onClick={addNewTab} variant="outline">Add Tab</Button>
+      </div>
+      {tabs.map(tab => (
+        <TabsContent key={tab.id} value={tab.id}>
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                <Input
+                  value={tab.name}
+                  onChange={(e) => handleTabNameChange(tab.id, e.target.value)}
+                  className="font-bold text-lg"
+                />
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <LexicalEditor
+                content={tab.content}
+                onChange={(newContent) => handleContentChange(tab.id, newContent)}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      ))}
+    </Tabs>
   );
 }
