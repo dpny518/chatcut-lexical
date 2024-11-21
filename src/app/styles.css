@@ -793,3 +793,16 @@ i.justify-align {
     height: 500px;
   }
 }
+
+.speaker-section {
+  margin-bottom: 1em;
+}
+
+.speaker-section > .text {
+  font-weight: bold;
+  color: #555;
+}
+
+.segment {
+  display: inline;
+}
