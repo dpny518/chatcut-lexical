@@ -49,14 +49,31 @@ export function CopyPastePlugin() {
       COMMAND_PRIORITY_LOW
     );
 
-    // Paste handler
-    const pasteHandler = editor.registerCommand(
-      PASTE_COMMAND,
-      (payload) => {
-        const clipboardData = payload instanceof ClipboardEvent ? payload.clipboardData : null;
-        const pastedText = clipboardData ? clipboardData.getData('text/plain') : '';
+   // Paste handler
+   const pasteHandler = editor.registerCommand(
+    PASTE_COMMAND,
+    (payload) => {
+      const clipboardData = payload instanceof ClipboardEvent ? payload.clipboardData : null;
+      const pastedText = clipboardData ? clipboardData.getData('text/plain') : '';
 
-        if (!pastedText) return false;
+      if (!pastedText) return false;
+
+      // Split the pasted text into words, accounting for possible extra spaces
+      const words = pastedText.split(/\s+/).filter(word => word.trim() !== '');
+
+      // Check if the pasted content has the correct structure
+      const isValidPaste = words.every(word => {
+        const parts = word.split('|');
+        return parts.length === 7 && 
+               !isNaN(parseFloat(parts[1])) && 
+               !isNaN(parseFloat(parts[2])) &&
+               !isNaN(parseInt(parts[6]));
+      });
+
+      if (!isValidPaste) {
+        console.warn('Invalid paste content. Only content with metadata is allowed.');
+        return true; // Prevent default paste behavior
+      }
 
         editor.update(() => {
           const selection = $getSelection();

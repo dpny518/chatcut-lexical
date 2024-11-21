@@ -36,6 +36,7 @@ function Placeholder() {
 
 const editorConfig = {
     theme: ExampleTheme,
+    editable: false,
     namespace: "daily-standup-editor",
     onError(error: unknown) {
         console.error(error);

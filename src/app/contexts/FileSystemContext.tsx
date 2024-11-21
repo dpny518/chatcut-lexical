@@ -62,7 +62,7 @@ export const FileSystemProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   
     try {
       console.log('Uploading file:', file.name);
-      const response = await fetch('http://localhost:8000/api/v1/upload', {
+      const response = await fetch('http://52.76.236.100:8000/api/v1/upload', {
         method: 'POST',
         body: formData,
       });

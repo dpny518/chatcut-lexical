@@ -12,7 +12,8 @@ import { PaperCutSpeakerNode } from '@/app/nodes/PaperCutSpeakerNode';
 import { PaperCutSegmentNode } from '@/app/nodes/PaperCutSegmentNode';
 import { CopyPastePlugin } from '@/app/plugins/CopyPastePlugin';
 import { WordHoverPlugin } from '@/app/plugins/WordHoverPlugin';
-
+import { EditRestrictionPlugin } from '@/app/plugins/EditRestrictionPlugin';
+import PaperCutToolbarPlugin from '@/app/plugins/PaperCutToolbarPlugin'
 const editorConfig = {
   namespace: 'PaperCutEditor',
   onError: (error: Error) => console.error(error),
@@ -42,6 +43,7 @@ function LexicalEditorComponent({ initialState, onChange }: LexicalEditorProps) 
   return (
     <LexicalComposer initialConfig={memoizedEditorConfig}>
       <div className="editor-container">
+        <PaperCutToolbarPlugin />
         <RichTextPlugin
           contentEditable={<ContentEditable className="editor-input" />}
           placeholder={<div className="editor-placeholder">Enter some text...</div>}
@@ -51,9 +53,11 @@ function LexicalEditorComponent({ initialState, onChange }: LexicalEditorProps) 
         <CopyPastePlugin />
         <OnChangePlugin onChange={handleChange} />
         <WordHoverPlugin />
+        <EditRestrictionPlugin />
       </div>
     </LexicalComposer>
   );
 }
+
 
 export const LexicalEditor = React.memo(LexicalEditorComponent);
