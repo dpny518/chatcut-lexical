@@ -13,7 +13,6 @@ export default function Home() {
   return (
     <FileSystemProvider>
       <div className="App">
-        <TypingAnimation />
         <div className="transcript-editor">
           <AppSidebar />
           <div className="main-editor">

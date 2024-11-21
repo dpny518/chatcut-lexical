@@ -2,7 +2,7 @@
 
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createCommand } from 'lexical';
+
 import {
   CAN_REDO_COMMAND,
   CAN_UNDO_COMMAND,
@@ -14,13 +14,16 @@ import {
   $getSelection,
   $isRangeSelection,
   $createParagraphNode,
-  $getNodeByKey
+  $getNodeByKey,
+  createCommand
 } from "lexical";
 import { $isLinkNode, TOGGLE_LINK_COMMAND } from "@lexical/link";
 import {
   $isParentElementRTL,
   $wrapNodes,
-  $isAtNodeEnd
+  $isAtNodeEnd,
+  $getSelectionStyleValueForProperty,
+  $patchStyleText
 } from "@lexical/selection";
 import { $getNearestNodeOfType, mergeRegister } from "@lexical/utils";
 import {
@@ -42,6 +45,9 @@ import {
   getDefaultCodeLanguage,
   getCodeLanguages
 } from "@lexical/code";
+
+
+
 
 const LowPriority = 1;
 
@@ -440,8 +446,10 @@ export default function ToolbarPlugin() {
   const [isGreenHighlight, setIsGreenHighlight] = useState(false);
   const [isRedHighlight, setIsRedHighlight] = useState(false);
 
-  const FORMAT_GREEN_HIGHLIGHT = createCommand('FORMAT_GREEN_HIGHLIGHT');
-  const FORMAT_RED_HIGHLIGHT = createCommand('FORMAT_RED_HIGHLIGHT'); 
+  const HIGHLIGHT_GREEN = '#ADFF2F';
+  const HIGHLIGHT_RED = '#FF6347';
+  const FORMAT_GREEN_HIGHLIGHT = 'format_green_highlight';
+  const FORMAT_RED_HIGHLIGHT = 'format_red_highlight';
 
   const updateToolbar = useCallback(() => {
     const selection = $getSelection();
@@ -453,6 +461,7 @@ export default function ToolbarPlugin() {
           : anchorNode.getTopLevelElementOrThrow();
       const elementKey = element.getKey();
       const elementDOM = editor.getElementByKey(elementKey);
+ 
       if (elementDOM !== null) {
         setSelectedElementKey(elementKey);
         if ($isListNode(element)) {
@@ -476,6 +485,11 @@ export default function ToolbarPlugin() {
       setIsStrikethrough(selection.hasFormat("strikethrough"));
       setIsCode(selection.hasFormat("code"));
       setIsRTL($isParentElementRTL(selection));
+      // Check for background color
+    // Check for background color
+      const bgColor = $getSelectionStyleValueForProperty(selection, 'background-color', null);
+      setIsGreenHighlight(bgColor === HIGHLIGHT_GREEN);
+      setIsRedHighlight(bgColor === HIGHLIGHT_RED);
 
       // Update links
       const node = getSelectedNode(selection);
@@ -488,6 +502,21 @@ export default function ToolbarPlugin() {
     }
   }, [editor]);
 
+  const applyStyleText = useCallback(
+    (styles, skipHistoryStack) => {
+      editor.update(
+        () => {
+          const selection = $getSelection();
+          if ($isRangeSelection(selection)) {
+            $patchStyleText(selection, styles);
+          }
+        },
+        skipHistoryStack ? { tag: 'skip-history' } : undefined
+      );
+    },
+    [editor]
+  );
+  
   useEffect(() => {
     return mergeRegister(
       editor.registerUpdateListener(({ editorState }) => {
@@ -523,13 +552,13 @@ export default function ToolbarPlugin() {
       editor.registerCommand(
         FORMAT_GREEN_HIGHLIGHT,
         () => {
-          editor.update(() => {
-            const selection = $getSelection();
-            if ($isRangeSelection(selection)) {
-              selection.formatText('backgroundColor', isGreenHighlight ? null : 'lightgreen');
-            }
-          });
-          setIsGreenHighlight(!isGreenHighlight);
+          const selection = $getSelection();
+          if ($isRangeSelection(selection)) {
+            const currentBgColor = $getSelectionStyleValueForProperty(selection, 'background-color', null);
+            applyStyleText({
+              'background-color': currentBgColor === HIGHLIGHT_GREEN ? null : HIGHLIGHT_GREEN
+            }, false);
+          }
           return true;
         },
         LowPriority
@@ -537,19 +566,20 @@ export default function ToolbarPlugin() {
       editor.registerCommand(
         FORMAT_RED_HIGHLIGHT,
         () => {
-          editor.update(() => {
-            const selection = $getSelection();
-            if ($isRangeSelection(selection)) {
-              selection.formatText('backgroundColor', isRedHighlight ? null : 'lightcoral');
-            }
-          });
-          setIsRedHighlight(!isRedHighlight);
+          const selection = $getSelection();
+          if ($isRangeSelection(selection)) {
+            const currentBgColor = $getSelectionStyleValueForProperty(selection, 'background-color', null);
+            applyStyleText({
+              'background-color': currentBgColor === HIGHLIGHT_RED ? null : HIGHLIGHT_RED
+            }, false);
+          }
           return true;
         },
         LowPriority
       )
     );
-  }, [editor, updateToolbar, isGreenHighlight, isRedHighlight]);
+  }, [editor, applyStyleText]);
+    
 
   const codeLanguges = useMemo(() => getCodeLanguages(), []);
   const onCodeLanguageSelect = useCallback(
@@ -573,6 +603,8 @@ export default function ToolbarPlugin() {
       editor.dispatchCommand(TOGGLE_LINK_COMMAND, null);
     }
   }, [editor, isLink]);
+
+
 
   return (
     <div className="toolbar" ref={toolbarRef}>
@@ -681,7 +713,7 @@ export default function ToolbarPlugin() {
             className={"toolbar-item spaced " + (isGreenHighlight ? "active" : "")}
             aria-label="Highlight Green"
           >
-            <i className="format highlight-green" style={{ backgroundColor: 'lightgreen', color: 'black' }}>G</i>
+            <i className="format highlight-green" style={{ backgroundColor: HIGHLIGHT_GREEN, color: 'black' }}>G</i>
           </button>
           <button
             onClick={() => {
@@ -690,7 +722,7 @@ export default function ToolbarPlugin() {
             className={"toolbar-item spaced " + (isRedHighlight ? "active" : "")}
             aria-label="Highlight Red"
           >
-            <i className="format highlight-red" style={{ backgroundColor: 'lightcoral', color: 'black' }}>R</i>
+            <i className="format highlight-red" style={{ backgroundColor: HIGHLIGHT_RED, color: 'black' }}>R</i>
           </button>
         </>
       )}
