@@ -2,6 +2,7 @@
 
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createCommand } from 'lexical';
 import {
   CAN_REDO_COMMAND,
   CAN_UNDO_COMMAND,
@@ -436,6 +437,12 @@ export default function ToolbarPlugin() {
   const [isStrikethrough, setIsStrikethrough] = useState(false);
   const [isCode, setIsCode] = useState(false);
 
+  const [isGreenHighlight, setIsGreenHighlight] = useState(false);
+  const [isRedHighlight, setIsRedHighlight] = useState(false);
+
+  const FORMAT_GREEN_HIGHLIGHT = createCommand('FORMAT_GREEN_HIGHLIGHT');
+  const FORMAT_RED_HIGHLIGHT = createCommand('FORMAT_RED_HIGHLIGHT'); 
+
   const updateToolbar = useCallback(() => {
     const selection = $getSelection();
     if ($isRangeSelection(selection)) {
@@ -511,9 +518,38 @@ export default function ToolbarPlugin() {
           return false;
         },
         LowPriority
+      ),
+      // New highlight commands
+      editor.registerCommand(
+        FORMAT_GREEN_HIGHLIGHT,
+        () => {
+          editor.update(() => {
+            const selection = $getSelection();
+            if ($isRangeSelection(selection)) {
+              selection.formatText('backgroundColor', isGreenHighlight ? null : 'lightgreen');
+            }
+          });
+          setIsGreenHighlight(!isGreenHighlight);
+          return true;
+        },
+        LowPriority
+      ),
+      editor.registerCommand(
+        FORMAT_RED_HIGHLIGHT,
+        () => {
+          editor.update(() => {
+            const selection = $getSelection();
+            if ($isRangeSelection(selection)) {
+              selection.formatText('backgroundColor', isRedHighlight ? null : 'lightcoral');
+            }
+          });
+          setIsRedHighlight(!isRedHighlight);
+          return true;
+        },
+        LowPriority
       )
     );
-  }, [editor, updateToolbar]);
+  }, [editor, updateToolbar, isGreenHighlight, isRedHighlight]);
 
   const codeLanguges = useMemo(() => getCodeLanguages(), []);
   const onCodeLanguageSelect = useCallback(
@@ -636,6 +672,25 @@ export default function ToolbarPlugin() {
             aria-label="Format Strikethrough"
           >
             <i className="format strikethrough" />
+          </button>
+          {/* New highlight buttons */}
+          <button
+            onClick={() => {
+              editor.dispatchCommand(FORMAT_GREEN_HIGHLIGHT);
+            }}
+            className={"toolbar-item spaced " + (isGreenHighlight ? "active" : "")}
+            aria-label="Highlight Green"
+          >
+            <i className="format highlight-green" style={{ backgroundColor: 'lightgreen', color: 'black' }}>G</i>
+          </button>
+          <button
+            onClick={() => {
+              editor.dispatchCommand(FORMAT_RED_HIGHLIGHT);
+            }}
+            className={"toolbar-item spaced " + (isRedHighlight ? "active" : "")}
+            aria-label="Highlight Red"
+          >
+            <i className="format highlight-red" style={{ backgroundColor: 'lightcoral', color: 'black' }}>R</i>
           </button>
         </>
       )}
