@@ -31,7 +31,7 @@ import { SpeakerNode } from "./nodes/SpeakerNode";
 import EditorContent from "./editorcontent";
 
 function Placeholder() {
-    return <div className="editor-placeholder">Enter some rich text...</div>;
+    return <div className="editor-placeholder">Upload and Select Some Transcripts.</div>;
 }
 
 const editorConfig = {
