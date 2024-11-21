@@ -128,8 +128,8 @@ const FileSystemTree: React.FC<{ parentId: string | null }> = ({ parentId }) => 
   const renderItem = (item: FileSystemItem) => (
     <div
       key={item.id}
-      className={`flex items-center gap-2 px-2 py-1 rounded-md cursor-pointer ${
-        selectedItems.includes(item.id) ? 'bg-blue-100' : 'hover:bg-gray-100'
+      className={`flex items-center gap-2 px-3 py-2 rounded-md cursor-pointer transition-colors ${
+        selectedItems.includes(item.id) ? 'bg-primary/10' : 'hover:bg-muted'
       }`}
       draggable
       onDragStart={(e) => handleDragStart(e, item.id)}
@@ -139,7 +139,7 @@ const FileSystemTree: React.FC<{ parentId: string | null }> = ({ parentId }) => 
       onClick={() => handleItemClick(item.id)}
     >
       {item.type === 'folder' && (
-        <span onClick={(e) => toggleFolder(item.id, e)}>
+        <span onClick={(e) => toggleFolder(item.id, e)} className="text-muted-foreground">
           {openFolders.has(item.id) ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
         </span>
       )}
@@ -150,17 +150,17 @@ const FileSystemTree: React.FC<{ parentId: string | null }> = ({ parentId }) => 
           onChange={(e) => setNewFolderName(e.target.value)}
           onBlur={() => handleRenameSubmit(item.id)}
           onKeyPress={(e) => e.key === 'Enter' && handleRenameSubmit(item.id)}
-          className="h-6 text-sm"
+          className="h-7 text-sm"
           onClick={(e) => e.stopPropagation()}
           autoFocus
         />
       ) : (
         <span className="text-sm truncate flex-grow">{item.name}</span>
       )}
-      <Button variant="ghost" size="sm" onClick={(e) => handleRename(e, item.id)}>
+      <Button variant="ghost" size="icon" onClick={(e) => handleRename(e, item.id)} className="h-7 w-7">
         <Edit2 className="w-4 h-4" />
       </Button>
-      <Button variant="ghost" size="sm" onClick={(e) => handleDelete(e, item.id)}>
+      <Button variant="ghost" size="icon" onClick={(e) => handleDelete(e, item.id)} className="h-7 w-7">
         <Trash2 className="w-4 h-4" />
       </Button>
     </div>
@@ -170,41 +170,43 @@ const FileSystemTree: React.FC<{ parentId: string | null }> = ({ parentId }) => 
     .filter(file => file.parentId === parentId)
     .sort((a, b) => a.order - b.order)
 
-  return (
-    <div className="pl-4">
-      {sortedItems.map(item => (
-        <React.Fragment key={item.id}>
-          {renderItem(item)}
-          {item.type === 'folder' && openFolders.has(item.id) && (
-            <FileSystemTree parentId={item.id} />
-          )}
-        </React.Fragment>
-      ))}
-      {isCreatingFolder ? (
-        <div className="flex items-center mt-2">
-          <Input
-            value={newFolderName}
-            onChange={(e) => setNewFolderName(e.target.value)}
-            placeholder="New folder name"
-            className="h-8 text-sm mr-2"
-            onKeyPress={(e) => e.key === 'Enter' && handleCreateFolder()}
-            autoFocus
-          />
-          <Button size="sm" onClick={handleCreateFolder}>Create</Button>
-        </div>
-      ) : (
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          onClick={() => setIsCreatingFolder(true)}
-          className="mt-2"
-        >
-          <Plus className="w-4 h-4 mr-2" /> New Folder
-        </Button>
-      )}
-    </div>
-  )
-}
+    return (
+      <div className="pl-4 space-y-2">
+        {sortedItems.map(item => (
+          <React.Fragment key={item.id}>
+            {renderItem(item)}
+            {item.type === 'folder' && openFolders.has(item.id) && (
+              <div className="ml-4">
+                <FileSystemTree parentId={item.id} />
+              </div>
+            )}
+          </React.Fragment>
+        ))}
+        {isCreatingFolder ? (
+          <div className="flex items-center space-x-2">
+            <Input
+              value={newFolderName}
+              onChange={(e) => setNewFolderName(e.target.value)}
+              placeholder="New folder name"
+              className="h-8 text-sm flex-grow"
+              onKeyPress={(e) => e.key === 'Enter' && handleCreateFolder()}
+              autoFocus
+            />
+            <Button size="sm" onClick={handleCreateFolder} className="h-8 px-3">
+              Create
+            </Button>
+          </div>
+        ) : (
+          <div 
+            onClick={() => setIsCreatingFolder(true)}
+            className="flex items-center px-2 py-1 rounded-md cursor-pointer text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-200"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            <span className="text-sm">New Folder</span>
+          </div>
+        )}
+      </div>
+    )}
 
 export function AppSidebar() {
   const { addFile } = useFileSystem();
@@ -219,14 +221,12 @@ export function AppSidebar() {
   }
 
   return (
-    <div className="w-64 h-screen overflow-auto bg-white border-r border-gray-200">
-      <div className="p-4">
+    <div className="w-64 h-screen overflow-auto bg-background border-r border-border">
+      <div className="p-4 space-y-4">
         <Button 
-          onClick={() => {
-            console.log("AppSidebar: Upload button clicked");
-            document.getElementById('file-upload')?.click();
-          }} 
-          className="w-full mb-4"
+          onClick={() => document.getElementById('file-upload')?.click()} 
+          className="w-full"
+          variant="default"
         >
           Upload Files
         </Button>

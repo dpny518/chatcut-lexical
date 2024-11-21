@@ -24,8 +24,8 @@ export function TypingAnimation(): JSX.Element {
     useEffect(() => {
         const options = {
             strings: [
-                "Welcome to ^500<strong>PaperCut</strong>^1000",
-                "AI-Powered ^500<strong>Text Editing</strong>^1000",
+                "Welcome to ^500<strong>ChatCut</strong>^1000",
+                "AI-Powered ^500<strong>Transcript Editing</strong>^1000",
                 "Creativity ^500<strong>Unleashed</strong>^1000"
             ],
             typeSpeed: 50,
@@ -46,8 +46,8 @@ export function TypingAnimation(): JSX.Element {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
-            className="relative flex justify-center items-center min-h-screen bg-gradient-to-br from-blue-50 to-blue-200 overflow-hidden"
-            aria-label="PaperCut Introduction"
+            className="relative flex justify-center items-center min-h-screen bg-gradient-to-br from-[#FFF7E6] to-[#FFE9D6] overflow-hidden"
+            aria-label="ChatCut Introduction"
         >
             <div className="absolute inset-0 pointer-events-none">
                 <motion.div
@@ -61,7 +61,7 @@ export function TypingAnimation(): JSX.Element {
                         repeat: Infinity, 
                         repeatType: "reverse" 
                     }}
-                    className="absolute top-10 right-10 text-blue-300"
+                    className="absolute top-10 right-10 text-[#F4B69A]"
                 >
                     <Sparkles size={100} />
                 </motion.div>
@@ -77,7 +77,7 @@ export function TypingAnimation(): JSX.Element {
                         repeatType: "reverse",
                         delay: 2.5
                     }}
-                    className="absolute bottom-10 left-10 text-purple-300"
+                    className="absolute bottom-10 left-10 text-[#E69A76]"
                 >
                     <Zap size={100} />
                 </motion.div>
@@ -88,23 +88,23 @@ export function TypingAnimation(): JSX.Element {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 0.2 }}
-                    className="block mb-4 text-sm text-gray-500 uppercase tracking-wider"
+                    className="block mb-4 text-sm text-gray-600 uppercase tracking-wider"
                 >
                     Introducing
                 </motion.span>
 
                 <span
                     ref={elementRef}
-                    className="block whitespace-pre text-4xl sm:text-5xl lg:text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-500 drop-shadow-md min-h-[100px]"
+                    className="block whitespace-pre text-4xl sm:text-5xl lg:text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#E76E4B] to-[#F59A6E] drop-shadow-md min-h-[100px]"
                 />
 
                 <motion.div 
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 0.4 }}
-                    className="mt-6 text-gray-600 text-lg sm:text-xl max-w-2xl mx-auto"
+                    className="mt-6 text-gray-700 text-lg sm:text-xl max-w-2xl mx-auto"
                 >
-                    <p>Revolutionize your writing with AI-powered creativity and precision.</p>
+                    <p>Streamline your documentary production with AI-powered transcript editing.</p>
                 </motion.div>
 
                 <motion.div
@@ -115,14 +115,14 @@ export function TypingAnimation(): JSX.Element {
                 >
                     <button 
                         onClick={handleLearnMore}
-                        className="px-6 py-3 bg-white border border-blue-600 text-blue-600 rounded-full hover:bg-blue-50 transition-all flex items-center space-x-2 shadow-md"
+                        className="px-6 py-3 bg-white border border-black text-black rounded-full hover:bg-gray-100 transition-all flex items-center space-x-2 shadow-md"
                     >
                         <Sparkles size={20} />
                         <span>Learn More</span>
                     </button>
                     <button 
                         onClick={handleGetStarted}
-                        className="px-6 py-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-all shadow-lg flex items-center space-x-2"
+                        className="px-6 py-3 bg-[#E76E4B] text-white rounded-full hover:bg-[#D75D39] transition-all shadow-lg flex items-center space-x-2"
                     >
                         <ArrowDown size={20} />
                         <span>Get Started</span>
@@ -147,7 +147,7 @@ export function TypingAnimation(): JSX.Element {
                     >
                         <ArrowDown 
                             size={32} 
-                            className="mx-auto text-blue-500 animate-bounce" 
+                            className="mx-auto text-[#E76E4B] animate-bounce" 
                         />
                     </motion.div>
                 </motion.div>
