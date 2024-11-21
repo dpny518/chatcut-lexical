@@ -1,11 +1,11 @@
+// src/app/components/RightPanel.tsx
 import React from 'react';
+import { PaperCutPanel } from './PaperCutPanel';
 
-const RightPanel = () => {
+const RightPanel: React.FC = () => {
   return (
     <div className="right-panel">
-      {/* Add right panel content here */}
-      <h2>Right Panel</h2>
-      {/* Additional editor or content */}
+      <PaperCutPanel />
     </div>
   );
 };
