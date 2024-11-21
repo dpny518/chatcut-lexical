@@ -1,64 +1,79 @@
 // src/app/plugins/WordHoverPlugin.tsx
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { $getNodeByKey } from 'lexical';
-import React, { useEffect, useRef } from 'react';
-import ReactDOM from 'react-dom/client';
-import { WordHoverCard } from '@/app/components/WordHoverCard';
+import React, { useEffect, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
+import { WordHoverCard, WordHoverCardProps } from '@/app/components/WordHoverCard';
 import { PaperCutWordNode } from '@/app/nodes/PaperCutWordNode';
+import { useFileSystem } from '@/app/contexts/FileSystemContext';
 
 export function WordHoverPlugin() {
   const [editor] = useLexicalComposerContext();
-  const rootsRef = useRef<Map<string, ReactDOM.Root>>(new Map());
+  const [hoverData, setHoverData] = useState<WordHoverCardProps | null>(null);
+  const { files } = useFileSystem();
+
+  const handleMouseMove = useCallback((event: MouseEvent) => {
+    const target = event.target as HTMLElement;
+    if (target.classList.contains('papercut-word')) {
+      const key = target.getAttribute('data-lexical-node-key');
+      if (key) {
+        editor.getEditorState().read(() => {
+          const lexicalNode = $getNodeByKey(key);
+          if (lexicalNode instanceof PaperCutWordNode) {
+            const fileId = lexicalNode.getFileId();
+            const fileItem = files[fileId];
+            console.log('File item:', fileItem); // Debug log
+
+            let fileName = 'Unknown';
+            let fileInfo = null;
+
+            if (fileItem) {
+              fileName = fileItem.name; // Use the name directly from the file item
+              try {
+                fileInfo = JSON.parse(fileItem.content);
+                console.log('Parsed file info:', fileInfo); // Debug log
+              } catch (error) {
+                console.error('Error parsing file content:', error);
+              }
+            }
+
+            const hoverData = {
+              word: lexicalNode.getTextContent(),
+              startTime: lexicalNode.getStartTime(),
+              endTime: lexicalNode.getEndTime(),
+              segmentId: lexicalNode.getSegmentId(),
+              speaker: lexicalNode.getSpeaker(),
+              fileId: fileId,
+              fileName: fileName,
+              wordIndex: lexicalNode.getWordIndex(),
+              rect: target.getBoundingClientRect(),
+            };
+
+            console.log('Hover data:', hoverData); // Debug log
+            setHoverData(hoverData);
+          }
+        });
+      }
+    } else {
+      setHoverData(null);
+    }
+  }, [editor, files]);
 
   useEffect(() => {
     const editorElement = editor.getRootElement();
     if (!editorElement) return;
 
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        mutation.addedNodes.forEach((node) => {
-          if (node instanceof HTMLElement && node.classList.contains('papercut-word')) {
-            const key = node.getAttribute('data-lexical-node-key');
-            if (key) {
-              editor.getEditorState().read(() => {
-                const lexicalNode = $getNodeByKey(key);
-                if (lexicalNode instanceof PaperCutWordNode) {
-                  let root = rootsRef.current.get(key);
-                  if (!root) {
-                    root = ReactDOM.createRoot(node);
-                    rootsRef.current.set(key, root);
-                  }
-
-                  root.render(
-                    <WordHoverCard
-                      word={lexicalNode.getTextContent()}
-                      startTime={lexicalNode.getStartTime()}
-                      endTime={lexicalNode.getEndTime()}
-                      segmentId={lexicalNode.getSegmentId()}
-                      speaker={lexicalNode.getSpeaker()}
-                      fileId={lexicalNode.getFileId()}
-                      wordIndex={lexicalNode.getWordIndex()}
-                    >
-                      <span>{lexicalNode.getTextContent()}</span>
-                    </WordHoverCard>
-                  );
-                }
-              });
-            }
-          }
-        });
-      });
-    });
-
-    observer.observe(editorElement, { childList: true, subtree: true });
+    editorElement.addEventListener('mousemove', handleMouseMove);
 
     return () => {
-      observer.disconnect();
-      rootsRef.current.forEach((root) => {
-        root.unmount();
-      });
+      editorElement.removeEventListener('mousemove', handleMouseMove);
     };
-  }, [editor]);
+  }, [editor, handleMouseMove]);
 
-  return null;
+  return hoverData
+    ? createPortal(
+        <WordHoverCard {...hoverData} />,
+        document.body
+      )
+    : null;
 }

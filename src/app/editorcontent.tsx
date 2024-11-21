@@ -1,3 +1,4 @@
+// src/app/components/EditorContent.tsx
 import { useEffect, useState } from "react";
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { $getRoot, $createTextNode, $getSelection, $isRangeSelection } from 'lexical';
@@ -7,6 +8,7 @@ import { FileContent, ParsedContent, Segment, Word } from '@/app/types/transcrip
 import { $createWordNode, $isWordNode, WordNode } from "./nodes/WordNode";
 import { $createSegmentNode, $isSegmentNode, SegmentNode } from "./nodes/SegmentNode";
 import { $createSpeakerNode, $isSpeakerNode, SpeakerNode } from "./nodes/SpeakerNode";
+import { $createParagraphNode } from 'lexical';
 
 function EditorContent() {
     const [editor] = useLexicalComposerContext();
@@ -14,12 +16,9 @@ function EditorContent() {
     const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
 
     useEffect(() => {
-        // Update selectedFiles state when selectedItems changes
         setSelectedFiles(prevSelected => {
             const newSelected = selectedItems.filter(id => files[id]?.type === 'file');
-            // Keep previously selected files that are still in selectedItems
             const remainingPrevSelected = prevSelected.filter(id => selectedItems.includes(id));
-            // Add newly selected files
             const newlySelected = newSelected.filter(id => !prevSelected.includes(id));
             return [...remainingPrevSelected, ...newlySelected];
         });
@@ -52,11 +51,30 @@ function EditorContent() {
                         console.log(`Processing file ${itemId}:`, transcript);
 
                         if (transcript && transcript.segments) {
+                            let lastSpeaker = '';
                             transcript.segments.forEach((segment: Segment, segmentIndex: number) => {
-                                const speakerNode = $createSpeakerNode(segment.speaker);
-                                const speakerLabelNode = $createTextNode(`${segment.speaker}\n`);
-                                speakerLabelNode.toggleFormat('bold');
-                                speakerNode.append(speakerLabelNode);
+                                if (segment.speaker !== lastSpeaker) {
+                                    // Add a blank line before new speaker (except for the first one)
+                                    if (lastSpeaker !== '') {
+                                        root.append($createParagraphNode());
+                                    }
+
+                                    // Create a new paragraph for each speaker change
+                                    const paragraphNode = $createParagraphNode();
+                                    
+                                    // Add time label with custom styling
+                                    const timeLabel = $createTextNode(`[${formatTime(segment.start_time)}] `);
+                                    timeLabel.setStyle('color: #888; font-size: 0.8em;');
+                                    paragraphNode.append(timeLabel);
+
+                                    // Add speaker label
+                                    const speakerLabel = $createTextNode(`${segment.speaker}: `);
+                                    speakerLabel.setFormat('bold');
+                                    paragraphNode.append(speakerLabel);
+
+                                    root.append(paragraphNode);
+                                    lastSpeaker = segment.speaker;
+                                }
 
                                 const segmentNode = $createSegmentNode(
                                     '',
@@ -84,8 +102,7 @@ function EditorContent() {
                                     }
                                 });
 
-                                speakerNode.append(segmentNode);
-                                root.append(speakerNode);
+                                root.append(segmentNode);
                             });
                         }
                     } catch (error) {
@@ -129,6 +146,12 @@ function EditorContent() {
     }, [editor]);
 
     return null;
+}
+
+function formatTime(seconds: number): string {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = Math.floor(seconds % 60);
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
 }
 
 export default EditorContent;

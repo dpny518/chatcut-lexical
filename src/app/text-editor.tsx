@@ -29,6 +29,8 @@ import { WordNode } from "./nodes/WordNode";
 import { SegmentNode } from "./nodes/SegmentNode";
 import { SpeakerNode } from "./nodes/SpeakerNode";
 import EditorContent from "./editorcontent";
+import { SegmentLabelPlugin } from '@/app/plugins/SegmentLabelPlugin';
+
 
 function Placeholder() {
     return <div className="editor-placeholder">Upload and Select Some Transcripts.</div>;
