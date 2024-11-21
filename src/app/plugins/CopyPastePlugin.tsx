@@ -11,9 +11,8 @@ import {
   COMMAND_PRIORITY_LOW, 
   COPY_COMMAND,
   PASTE_COMMAND, 
-  PasteCommandType,
-  ElementNode,
-  TextNode
+  TextNode,
+  LexicalCommand
 } from 'lexical';
 import { PaperCutWordNode, $createPaperCutWordNode, $isPaperCutWordNode } from '@/app/nodes/PaperCutWordNode';
 import { PaperCutSpeakerNode, $createPaperCutSpeakerNode, $isPaperCutSpeakerNode } from '@/app/nodes/PaperCutSpeakerNode';
@@ -26,9 +25,9 @@ export function CopyPastePlugin() {
 
   React.useEffect(() => {
     // Copy handler
-    const copyHandler = editor.registerCommand(
+    const copyHandler = editor.registerCommand<ClipboardEvent>(
       COPY_COMMAND,
-      (event: ClipboardEvent) => {
+      (event) => {
         const selection = $getSelection();
         if (!$isRangeSelection(selection)) return false;
 
@@ -50,84 +49,84 @@ export function CopyPastePlugin() {
       COMMAND_PRIORITY_LOW
     );
 
-   // Paste handler
-   const pasteHandler = editor.registerCommand<PasteCommandType>(
-    PASTE_COMMAND,
-    (event) => {
-      const clipboardData = event instanceof ClipboardEvent ? event.clipboardData : null;
-      const pastedText = clipboardData ? clipboardData.getData('text/plain') : '';
+    // Paste handler
+    const pasteHandler = editor.registerCommand(
+      PASTE_COMMAND,
+      (payload) => {
+        const clipboardData = payload instanceof ClipboardEvent ? payload.clipboardData : null;
+        const pastedText = clipboardData ? clipboardData.getData('text/plain') : '';
 
-      if (!pastedText) return false;
+        if (!pastedText) return false;
 
-      editor.update(() => {
-        const selection = $getSelection();
-        if (!$isRangeSelection(selection)) return;
+        editor.update(() => {
+          const selection = $getSelection();
+          if (!$isRangeSelection(selection)) return;
 
-        const words = pastedText.split(' ');
-        let currentSpeaker = '';
-        let speakerNode: PaperCutSpeakerNode | null = null;
-        let paragraphNode: ElementNode | null = null;
+          selection.insertText(''); // Clear any selected text
 
-        words.forEach((word) => {
-          const parts = word.split('|');
-          if (parts.length === 7) {
-            const [text, startTime, endTime, segmentId, speaker, fileId, wordIndex] = parts as WordData;
+          const words = pastedText.split(' ');
+          let currentSpeaker = '';
+          let paragraphNode = $createParagraphNode();
 
-            if (speaker !== currentSpeaker) {
-              currentSpeaker = speaker;
-              
-              // Create a new paragraph for the new speaker
-              paragraphNode = $createParagraphNode();
-              selection.insertNodes([paragraphNode]);
+          words.forEach((word: string) => {
+            const parts = word.split('|');
+            if (parts.length === 7) {
+              const [text, startTime, endTime, segmentId, speaker, fileId, wordIndex] = parts as WordData;
 
-              // Add speaker name as a bold text node
-              const speakerNameNode = $createTextNode(speaker + ': ');
-              speakerNameNode.toggleFormat('bold');
-              paragraphNode.append(speakerNameNode);
+              if (speaker !== currentSpeaker) {
+                currentSpeaker = speaker;
+                
+                if (paragraphNode.getTextContent()) {
+                  selection.insertNodes([paragraphNode]);
+                  paragraphNode = $createParagraphNode();
+                }
+
+                // Add speaker name as a bold text node
+                const speakerNameNode = $createTextNode(speaker + ': ');
+                speakerNameNode.toggleFormat('bold');
+                paragraphNode.append(speakerNameNode);
+              }
+
+              const wordNode = $createPaperCutWordNode(
+                text,
+                parseFloat(startTime) || 0,
+                parseFloat(endTime) || 0,
+                segmentId,
+                speaker,
+                fileId,
+                parseInt(wordIndex) || 0
+              );
+              paragraphNode.append(wordNode);
+              paragraphNode.append($createTextNode(' ')); // Add space between words
+            } else {
+              // If it's not in our special format, just insert it as plain text
+              paragraphNode.append($createTextNode(word + ' '));
             }
+          });
 
-            const wordNode = $createPaperCutWordNode(
-              text,
-              parseFloat(startTime) || 0,
-              parseFloat(endTime) || 0,
-              segmentId,
-              speaker,
-              fileId,
-              parseInt(wordIndex) || 0
-            );
-            paragraphNode?.append(wordNode);
-            paragraphNode?.append($createTextNode(' ')); // Add space between words
-          } else {
-            // If it's not in our special format, just insert it as plain text
-            selection.insertText(word + ' ');
+          // Insert the last paragraph if it's not empty
+          if (paragraphNode.getTextContent()) {
+            selection.insertNodes([paragraphNode]);
+          }
+
+          // Move selection to the end of the pasted content
+          const lastNode = paragraphNode.getLastDescendant();
+          if (lastNode instanceof TextNode || lastNode instanceof PaperCutWordNode) {
+            selection.setTextNodeRange(lastNode, lastNode.getTextContent().length, lastNode, lastNode.getTextContent().length);
           }
         });
 
-        // Move selection to the end of the pasted content
-        const nodes = selection.getNodes();
-        const lastNode = nodes[nodes.length - 1];
-        if (lastNode) {
-          if (lastNode instanceof TextNode || lastNode instanceof PaperCutWordNode) {
-            selection.setTextNodeRange(lastNode, lastNode.getTextContent().length, lastNode, lastNode.getTextContent().length);
-          } else if (lastNode instanceof ElementNode) {
-            const lastChild = lastNode.getLastDescendant();
-            if (lastChild instanceof TextNode || lastChild instanceof PaperCutWordNode) {
-              selection.setTextNodeRange(lastChild, lastChild.getTextContent().length, lastChild, lastChild.getTextContent().length);
-            }
-          }
-        }
-      });
+        return true;
+      },
+      COMMAND_PRIORITY_LOW
+    );
 
-      return true;
-    },
-    COMMAND_PRIORITY_LOW
-  );
+    // Clean up
+    return () => {
+      copyHandler();
+      pasteHandler();
+    };
+  }, [editor]);
 
-  // Clean up
-  return () => {
-    pasteHandler();
-  };
-}, [editor]);
-
-return null;
+  return null;
 }

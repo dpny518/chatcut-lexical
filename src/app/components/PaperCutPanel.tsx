@@ -19,12 +19,12 @@ import { LexicalEditor } from './LexicalEditor';
 type PaperCutTab = {
   id: string;
   name: string;
-  content: string;
+  editorState: string | null;
 };
 
 export function PaperCutPanel() {
   const [tabs, setTabs] = useState<PaperCutTab[]>([
-    { id: '1', name: 'PaperCut 1', content: '' }
+    { id: '1', name: 'PaperCut 1', editorState: null }
   ]);
   const [activeTab, setActiveTab] = useState('1');
 
@@ -34,16 +34,16 @@ export function PaperCutPanel() {
     ));
   }, []);
 
-  const handleContentChange = useCallback((id: string, newContent: string) => {
+  const handleEditorStateChange = useCallback((id: string, newState: string) => {
     setTabs(prevTabs => prevTabs.map(tab => 
-      tab.id === id ? { ...tab, content: newContent } : tab
+      tab.id === id ? { ...tab, editorState: newState } : tab
     ));
   }, []);
 
   const addNewTab = useCallback(() => {
     setTabs(prevTabs => {
       const newId = (parseInt(prevTabs[prevTabs.length - 1].id) + 1).toString();
-      const newTab = { id: newId, name: `PaperCut ${newId}`, content: '' };
+      const newTab = { id: newId, name: `PaperCut ${newId}`, editorState: null };
       setActiveTab(newId);
       return [...prevTabs, newTab];
     });
@@ -75,8 +75,8 @@ export function PaperCutPanel() {
             </CardHeader>
             <CardContent>
               <LexicalEditor
-                content={tab.content}
-                onChange={(newContent) => handleContentChange(tab.id, newContent)}
+                initialState={tab.editorState}
+                onChange={(newState) => handleEditorStateChange(tab.id, newState)}
               />
             </CardContent>
           </Card>

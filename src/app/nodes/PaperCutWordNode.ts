@@ -20,6 +20,9 @@ export class PaperCutWordNode extends TextNode {
   __fileId: string;
   __wordIndex: number;
 
+
+
+
   static getType(): string {
     return 'papercut-word';
   }
@@ -78,9 +81,11 @@ export class PaperCutWordNode extends TextNode {
     this.__wordIndex = wordIndex;
   }
 
+  
   createDOM(config: EditorConfig): HTMLElement {
     const dom = super.createDOM(config);
     dom.classList.add('papercut-word');
+    dom.setAttribute('data-lexical-node-key', this.__key);
     return dom;
   }
 

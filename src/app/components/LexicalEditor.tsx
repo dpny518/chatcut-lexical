@@ -1,17 +1,17 @@
 // src/app/components/LexicalEditor.tsx
-import React, { useEffect, useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin';
 import LexicalErrorBoundary from '@lexical/react/LexicalErrorBoundary';
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
-import { $getRoot, $createParagraphNode, $createTextNode, EditorState } from 'lexical';
+import { EditorState } from 'lexical';
 import { PaperCutWordNode } from '@/app/nodes/PaperCutWordNode';
 import { PaperCutSpeakerNode } from '@/app/nodes/PaperCutSpeakerNode';
 import { PaperCutSegmentNode } from '@/app/nodes/PaperCutSegmentNode';
 import { CopyPastePlugin } from '@/app/plugins/CopyPastePlugin';
+import { WordHoverPlugin } from '@/app/plugins/WordHoverPlugin';
 
 const editorConfig = {
   namespace: 'PaperCutEditor',
@@ -23,39 +23,24 @@ const editorConfig = {
   ]
 };
 
-function InitialContentPlugin({ content }: { content: string }) {
-  const [editor] = useLexicalComposerContext();
-
-  useEffect(() => {
-    editor.update(() => {
-      const root = $getRoot();
-      if (root.getTextContent() !== content) {
-        root.clear();
-        const paragraph = $createParagraphNode();
-        paragraph.append($createTextNode(content));
-        root.append(paragraph);
-      }
-    });
-  }, [editor, content]);
-
-  return null;
-}
-
 interface LexicalEditorProps {
-  content: string;
-  onChange: (content: string) => void;
+  initialState: string | null;
+  onChange: (state: string) => void;
 }
 
-function LexicalEditorComponent({ content, onChange }: LexicalEditorProps) {
+function LexicalEditorComponent({ initialState, onChange }: LexicalEditorProps) {
   const handleChange = useCallback((editorState: EditorState) => {
-    editorState.read(() => {
-      const root = $getRoot();
-      onChange(root.getTextContent());
-    });
+    // Serialize the entire editor state to a string
+    onChange(JSON.stringify(editorState));
   }, [onChange]);
 
+  const memoizedEditorConfig = useMemo(() => ({
+    ...editorConfig,
+    editorState: initialState,
+  }), [initialState]);
+
   return (
-    <LexicalComposer initialConfig={editorConfig}>
+    <LexicalComposer initialConfig={memoizedEditorConfig}>
       <div className="editor-container">
         <RichTextPlugin
           contentEditable={<ContentEditable className="editor-input" />}
@@ -65,7 +50,7 @@ function LexicalEditorComponent({ content, onChange }: LexicalEditorProps) {
         <HistoryPlugin />
         <CopyPastePlugin />
         <OnChangePlugin onChange={handleChange} />
-        <InitialContentPlugin content={content} />
+        <WordHoverPlugin />
       </div>
     </LexicalComposer>
   );

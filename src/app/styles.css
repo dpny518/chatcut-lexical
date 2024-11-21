@@ -878,6 +878,13 @@ i.justify-align {
   margin-left: 1em;
 }
 
+
 .papercut-word {
   display: inline-block;
+  cursor: pointer;
+  user-select: none;
+}
+
+.papercut-word:hover {
+  background-color: #f0f0f0;
 }
