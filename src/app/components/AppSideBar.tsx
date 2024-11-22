@@ -5,7 +5,7 @@ import { Folder, File, Image, ChevronRight, ChevronDown, Plus, Trash2, Edit2 } f
 import { useFileSystem, FileSystemItem, FileType } from '@/app/contexts/FileSystemContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-
+import Chatbot from '@/app/components/Chatbot/Chatbot'
 import { Editor } from '@/app/text-editor'
 
 const FileIcon: React.FC<{ type: FileType }> = ({ type }) => {
@@ -220,25 +220,32 @@ export function AppSidebar() {
     }
   }
 
+
   return (
-    <div className="w-64 h-screen overflow-auto bg-background border-r border-border">
-      <div className="p-4 space-y-4">
-        <Button 
-          onClick={() => document.getElementById('file-upload')?.click()} 
-          className="w-full"
-          variant="default"
-        >
-          Upload Files
-        </Button>
-        <input
-          id="file-upload"
-          type="file"
-          multiple
-          className="hidden"
-          onChange={handleFileUpload}
-        />
-        <FileSystemTree parentId={null} />
+    <div className="flex flex-col h-full">
+      <div className="flex-grow overflow-auto">
+        <div className="p-4 space-y-4">
+          <Button 
+            onClick={() => document.getElementById('file-upload')?.click()} 
+            className="w-full"
+            variant="default"
+          >
+            Upload Files
+          </Button>
+          <input
+            id="file-upload"
+            type="file"
+            multiple
+            className="hidden"
+            onChange={handleFileUpload}
+          />
+          <FileSystemTree parentId={null} />
+        </div>
+      </div>
+      <div className="border-t border-border p-4">
+        <Chatbot />
       </div>
     </div>
   )
+
 }

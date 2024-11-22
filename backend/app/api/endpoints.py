@@ -8,6 +8,12 @@ import logging
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
+class ChatInput(BaseModel):
+    message: str
+    formatted_content: Dict[str, Any]
+    selected_files: Dict[str, Any]
+
+
 @router.post("/upload")
 async def upload_file(file: UploadFile = File(...), user_id: str = "default_user"):
     logger.info(f"Received file: {file.filename}, user_id: {user_id}")
@@ -25,6 +31,19 @@ async def get_processed(user_id: str, file_id: str):
     if not processed_data:
         raise HTTPException(status_code=404, detail="Processed file not found")
     return processed_data
+
+@router.post("/chat")
+async def chat(chat_input: ChatInput):
+    logger.info(f"Received chat message: {chat_input.message}")
+    # Here you would process the chat input and generate a response
+    # For now, we'll just echo back the received data
+    response = {
+        "acknowledgement": f"Received message: {chat_input.message}",
+        "formatted_content": chat_input.formatted_content,
+        "selected_files": chat_input.selected_files
+    }
+    logger.info(f"Sending chat response: {response}")
+    return response
 
 @router.get("/projects/{project_id}")
 async def get_project(project_id: str):

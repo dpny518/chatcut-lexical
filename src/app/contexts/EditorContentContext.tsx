@@ -1,74 +1,45 @@
-// FormattedWordsPlugin.tsx
-import { useEffect } from 'react';
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
-import { $getRoot, $isTextNode, TextNode, LexicalNode, ElementNode } from 'lexical';
-import { $isWordNode, WordNode } from '@/app/nodes/WordNode';
-import { useFormattedWords } from '@/app/contexts/FormattedWordsContext';
+// src/app/contexts/EditorContentContext.tsx
+'use client'
+import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 
-const HIGHLIGHT_GREEN = '#ADFF2F';
-const HIGHLIGHT_RED = '#FF6347';
+type EditorContentContextType = {
+  selectedFileIds: string[];
+  setSelectedFileIds: React.Dispatch<React.SetStateAction<string[]>>;
+};
 
-export function FormattedWordsPlugin(): null {
-  const [editor] = useLexicalComposerContext();
-  const { setFormattedWords } = useFormattedWords();
+const EditorContentContext = createContext<EditorContentContextType | undefined>(undefined);
+
+export const EditorContentProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [selectedFileIds, setSelectedFileIds] = useState<string[]>([]);
 
   useEffect(() => {
-    return editor.registerUpdateListener(({ editorState }) => {
-      editorState.read(() => {
-        const formattedWords = {
-          all_content: [] as string[],
-          bold_content: [] as string[],
-          italic_content: [] as string[],
-          strikethrough_content: [] as string[],
-          green_content: [] as string[],
-          red_content: [] as string[],
-        };
+    console.log('Selected File IDs updated:', selectedFileIds);
+  }, [selectedFileIds]);
 
-        const traverseNodes = (node: LexicalNode) => {
-          if ($isTextNode(node) || $isWordNode(node)) {
-            const text = node.getTextContent();
-            const format = node.getFormat();
-            
-            let wordData: string;
-            if ($isWordNode(node)) {
-              wordData = `${text}|${node.getStartTime()}|${node.getEndTime()}|${node.getSegmentId()}|${node.getFileId()}|${node.getWordIndex()}`;
-            } else {
-              wordData = text;
-            }
-
-            formattedWords.all_content.push(wordData);
-
-            if (format & 1) formattedWords.bold_content.push(wordData);
-            if (format & 2) formattedWords.italic_content.push(wordData);
-            if (format & 8) formattedWords.strikethrough_content.push(wordData);
-            
-            // Check for background color
-            const styles = node.getStyle();
-            if (styles) {
-              const bgColor = styles.split(';').find(style => style.trim().startsWith('background-color:'));
-              if (bgColor) {
-                const color = bgColor.split(':')[1].trim();
-                if (color === HIGHLIGHT_GREEN) {
-                  formattedWords.green_content.push(wordData);
-                } else if (color === HIGHLIGHT_RED) {
-                  formattedWords.red_content.push(wordData);
-                }
-              }
-            }
-          }
-
-          if (node instanceof ElementNode) {
-            node.getChildren().forEach(traverseNodes);
-          }
-        };
-
-        traverseNodes($getRoot());
-
-        // Update the context with the new formatted words
-        setFormattedWords(formattedWords);
+  const setSelectedFileIdsWithLogging = (newFileIds: React.SetStateAction<string[]>) => {
+    setSelectedFileIds((prevFileIds) => {
+      const nextFileIds = typeof newFileIds === 'function' ? newFileIds(prevFileIds) : newFileIds;
+      console.log('Selected File IDs changing:', {
+        prev: prevFileIds,
+        next: nextFileIds,
+        added: nextFileIds.filter(id => !prevFileIds.includes(id)),
+        removed: prevFileIds.filter(id => !nextFileIds.includes(id)),
       });
+      return nextFileIds;
     });
-  }, [editor, setFormattedWords]);
+  };
 
-  return null;
-}
+  return (
+    <EditorContentContext.Provider value={{ selectedFileIds, setSelectedFileIds: setSelectedFileIdsWithLogging }}>
+      {children}
+    </EditorContentContext.Provider>
+  );
+};
+
+export const useEditorContent = () => {
+  const context = useContext(EditorContentContext);
+  if (context === undefined) {
+    throw new Error('useEditorContent must be used within an EditorContentProvider');
+  }
+  return context;
+};

@@ -1,32 +1,33 @@
-import React, { useState, useEffect } from 'react';
+// Chatbot.tsx
+import React, { useState } from 'react';
 import { sendMessage } from './ChatbotAPI';
-import { generatePrompt } from './PromptTemplates';
 import ChatMessage from './ChatMessage';
 import ChatInput from './ChatInput';
+import { useEditorContent } from '@/app/contexts/EditorContentContext';
+import { useFormattedWords } from '@/app/contexts/FormattedWordsContext';
+import { useFileSystem, FileSystemItem } from "@/app/contexts/FileSystemContext";
 
-interface ChatbotProps {
-  formattedContent: {
-    all_content: string[];
-    bold_content: string[];
-    italic_content: string[];
-    strikethrough_content: string[];
-    green_content: string[];
-    red_content: string[];
-  };
-  mergedContent: string;
-}
-
-const Chatbot: React.FC<ChatbotProps> = ({ formattedContent, mergedContent }) => {
+const Chatbot: React.FC = () => {
   const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant', content: string }>>([]);
   const [isTyping, setIsTyping] = useState(false);
+  const { selectedFileIds } = useEditorContent();
+  const { formattedWords } = useFormattedWords();
+  const { files } = useFileSystem();
 
   const handleSendMessage = async (message: string) => {
     setMessages(prev => [...prev, { role: 'user', content: message }]);
     setIsTyping(true);
 
-    const prompt = generatePrompt(message, formattedContent, mergedContent);
+    // Get the selected files
+    const selectedFiles = selectedFileIds.reduce((acc, id) => {
+      if (files[id]) {
+        acc[id] = files[id];
+      }
+      return acc;
+    }, {} as { [id: string]: FileSystemItem });
+
     try {
-      const response = await sendMessage(prompt);
+      const response = await sendMessage(message, formattedWords, selectedFiles);
       setMessages(prev => [...prev, { role: 'assistant', content: response }]);
     } catch (error) {
       console.error('Error sending message:', error);
@@ -36,8 +37,8 @@ const Chatbot: React.FC<ChatbotProps> = ({ formattedContent, mergedContent }) =>
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex-grow overflow-auto p-4 space-y-4">
+    <div className="flex flex-col h-64"> {/* Adjust height as needed */}
+      <div className="flex-grow overflow-auto p-2 space-y-2">
         {messages.map((msg, index) => (
           <ChatMessage key={index} role={msg.role} content={msg.content} />
         ))}

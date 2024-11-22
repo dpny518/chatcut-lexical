@@ -9,11 +9,12 @@ import { $createWordNode, $isWordNode, WordNode } from "./nodes/WordNode";
 import { $createSegmentNode, $isSegmentNode, SegmentNode } from "./nodes/SegmentNode";
 import { $createSpeakerNode, $isSpeakerNode, SpeakerNode } from "./nodes/SpeakerNode";
 import { $createParagraphNode } from 'lexical';
-
+import { useEditorContent } from "@/app/contexts/EditorContentContext";
 function EditorContent() {
     const [editor] = useLexicalComposerContext();
     const { files, selectedItems } = useFileSystem();
     const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
+    const { setSelectedFileIds } = useEditorContent();
 
     useEffect(() => {
         setSelectedFiles(prevSelected => {
@@ -112,8 +113,9 @@ function EditorContent() {
             });
 
             console.log("Finished processing all files");
+            setSelectedFileIds(selectedFiles);
         });
-    }, [editor, files, selectedFiles]);
+    }, [editor, files, selectedFiles, setSelectedFileIds]);
 
     useEffect(() => {
         return editor.registerCommand(
