@@ -19,17 +19,17 @@ import { CodeHighlightNode, CodeNode } from "@lexical/code";
 import { AutoLinkNode, LinkNode } from "@lexical/link";
 import { TRANSFORMERS } from "@lexical/markdown";
 
-import TreeViewPlugin from "@/app/plugins/TreeViewPlugin";
 import ToolbarPlugin from "@/app/plugins/ToolbarPlugin";
 import AutoLinkPlugin from "@/app/plugins/AutoLinkPlugin";
 import CodeHighlightPlugin from "@/app/plugins/CodeHighlightPlugin";
+import {FormattedWordsPlugin} from "@/app/plugins/FormattedWordsPlugin"
 
 import ExampleTheme from "@/app/themes/ExampleTheme";
 import { WordNode } from "./nodes/WordNode";
 import { SegmentNode } from "./nodes/SegmentNode";
 import { SpeakerNode } from "./nodes/SpeakerNode";
 import EditorContent from "./editorcontent";
-import { SegmentLabelPlugin } from '@/app/plugins/SegmentLabelPlugin';
+
 
 
 function Placeholder() {
@@ -120,6 +120,7 @@ export function Editor(): JSX.Element | null {
                     <LinkPlugin />
                     <TabIndentationPlugin />
                     <AutoLinkPlugin />
+                    <FormattedWordsPlugin />
                     <MarkdownShortcutPlugin transformers={TRANSFORMERS} />
                     <EditorContent />
                 </div>
