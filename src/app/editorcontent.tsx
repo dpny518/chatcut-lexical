@@ -1,5 +1,4 @@
-// src/app/components/EditorContent.tsx
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { $getRoot, $createTextNode, $getSelection, $isRangeSelection } from 'lexical';
 import { COPY_COMMAND, COMMAND_PRIORITY_LOW } from 'lexical';
@@ -10,23 +9,21 @@ import { $createSegmentNode, $isSegmentNode, SegmentNode } from "./nodes/Segment
 import { $createSpeakerNode, $isSpeakerNode, SpeakerNode } from "./nodes/SpeakerNode";
 import { $createParagraphNode } from 'lexical';
 import { useEditorContent } from "@/app/contexts/EditorContentContext";
+
 function EditorContent() {
     const [editor] = useLexicalComposerContext();
-    const { files, selectedItems } = useFileSystem();
-    const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
-    const { setSelectedFileIds } = useEditorContent();
+    const { files } = useFileSystem();
+    const { selectedFileIds, setSelectedFileIds } = useEditorContent();
 
     useEffect(() => {
-        setSelectedFiles(prevSelected => {
-            const newSelected = selectedItems.filter(id => files[id]?.type === 'file');
-            const remainingPrevSelected = prevSelected.filter(id => selectedItems.includes(id));
-            const newlySelected = newSelected.filter(id => !prevSelected.includes(id));
-            return [...remainingPrevSelected, ...newlySelected];
-        });
-    }, [selectedItems, files]);
+        console.log("Current Files Structure:", Object.entries(files).map(([id, file]) => ({
+            id,
+            name: file.name,
+            order: file.order,
+            parentId: file.parentId
+        })));
 
-    useEffect(() => {
-        if (selectedFiles.length === 0) {
+        if (selectedFileIds.length === 0) {
             editor.update(() => {
                 const root = $getRoot();
                 root.clear();
@@ -38,9 +35,25 @@ function EditorContent() {
             const root = $getRoot();
             root.clear();
 
-            console.log("Processing files:", selectedFiles);
+            // Get the original order of files in the file system
+            const fileSystemOrder = Object.keys(files);
+            
+            // Sort selected files based on their position in the file system
+            const sortedSelectedFiles = selectedFileIds
+                .map(id => ({
+                    id,
+                    originalIndex: fileSystemOrder.indexOf(id)
+                }))
+                .sort((a, b) => a.originalIndex - b.originalIndex)
+                .map(({ id }) => id);
 
-            selectedFiles.forEach((itemId) => {
+            console.log("Files in original system order:", sortedSelectedFiles.map(id => ({
+                id,
+                name: files[id].name,
+                originalIndex: fileSystemOrder.indexOf(id)
+            })));
+
+            sortedSelectedFiles.forEach((itemId) => {
                 const selectedFile = files[itemId];
                 if (selectedFile && selectedFile.type === 'file') {
                     try {
@@ -49,26 +62,22 @@ function EditorContent() {
                             ? fileContent.processed_data.transcript 
                             : fileContent.transcript;
 
-                        console.log(`Processing file ${itemId}:`, transcript);
+                        console.log(`Processing file ${selectedFile.name}`);
 
                         if (transcript && transcript.segments) {
                             let lastSpeaker = '';
                             transcript.segments.forEach((segment: Segment, segmentIndex: number) => {
                                 if (segment.speaker !== lastSpeaker) {
-                                    // Add a blank line before new speaker (except for the first one)
                                     if (lastSpeaker !== '') {
                                         root.append($createParagraphNode());
                                     }
 
-                                    // Create a new paragraph for each speaker change
                                     const paragraphNode = $createParagraphNode();
                                     
-                                    // Add time label with custom styling
                                     const timeLabel = $createTextNode(`[${formatTime(segment.start_time)}] `);
                                     timeLabel.setStyle('color: #888; font-size: 0.8em;');
                                     paragraphNode.append(timeLabel);
 
-                                    // Add speaker label
                                     const speakerLabel = $createTextNode(`${segment.speaker}: `);
                                     speakerLabel.setFormat('bold');
                                     paragraphNode.append(speakerLabel);
@@ -113,10 +122,8 @@ function EditorContent() {
             });
 
             console.log("Finished processing all files");
-            setSelectedFileIds(selectedFiles);
         });
-    }, [editor, files, selectedFiles, setSelectedFileIds]);
-
+    }, [editor, files, selectedFileIds]);
     useEffect(() => {
         return editor.registerCommand(
             COPY_COMMAND,

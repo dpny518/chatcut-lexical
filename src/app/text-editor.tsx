@@ -30,7 +30,7 @@ import { SegmentNode } from "./nodes/SegmentNode";
 import { SpeakerNode } from "./nodes/SpeakerNode";
 import EditorContent from "./editorcontent";
 
-
+import { useEditorContent } from "@/app/contexts/EditorContentContext";
 
 function Placeholder() {
     return <div className="editor-placeholder">Upload and Select Some Transcripts.</div>;
@@ -94,6 +94,7 @@ const editorConfig = {
 
 export function Editor(): JSX.Element | null {
     const [isMounted, setIsMounted] = useState(false);
+    const { selectedFileIds } = useEditorContent();
 
     useEffect(() => {
         setIsMounted(true);

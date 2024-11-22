@@ -3,7 +3,7 @@ import '@/app/globals.css'
 import { Inter } from 'next/font/google'
 import { FileSystemProvider } from '@/app/contexts/FileSystemContext'
 import { EditorContentProvider } from '@/app/contexts/EditorContentContext'
-import { FormattedWordsProvider } from '@/app/contexts/FormattedWordsContext'
+import { DynamicFormattedWordsProvider } from '@/app/components/DynamicFormattedWordsProvider'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -23,9 +23,9 @@ export default function RootLayout({
       <body className={inter.className}>
         <FileSystemProvider>
           <EditorContentProvider>
-            <FormattedWordsProvider>
+            <DynamicFormattedWordsProvider>
               {children}
-            </FormattedWordsProvider>
+            </DynamicFormattedWordsProvider>
           </EditorContentProvider>
         </FileSystemProvider>
       </body>

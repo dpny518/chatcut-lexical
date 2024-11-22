@@ -35,11 +35,11 @@ async def get_processed(user_id: str, file_id: str):
 
 @router.post("/chat")
 async def chat(chat_input: ChatInput):
-    logger.info(f"Received chat message: {chat_input.message}")
+    logger.info(f"Received chat input: {chat_input}")
     # Here you would process the chat input and generate a response
     # For now, we'll just echo back the received data
     response = {
-        "acknowledgement": f"Received message: {chat_input.message}",
+        "message": f"Received message: {chat_input.message}",
         "formatted_content": chat_input.formatted_content,
         "selected_files": chat_input.selected_files
     }

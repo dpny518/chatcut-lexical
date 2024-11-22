@@ -3,41 +3,50 @@ import React, { useState } from 'react';
 import { sendMessage } from './ChatbotAPI';
 import ChatMessage from './ChatMessage';
 import ChatInput from './ChatInput';
-import { useEditorContent } from '@/app/contexts/EditorContentContext';
-import { useFormattedWords } from '@/app/contexts/FormattedWordsContext';
-import { useFileSystem, FileSystemItem } from "@/app/contexts/FileSystemContext";
+import { FormattedWordsType } from '@/app/contexts/FormattedWordsContext';
 
 const Chatbot: React.FC = () => {
   const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant', content: string }>>([]);
   const [isTyping, setIsTyping] = useState(false);
-  const { selectedFileIds } = useEditorContent();
-  const { formattedWords } = useFormattedWords();
-  const { files } = useFileSystem();
 
-  const handleSendMessage = async (message: string) => {
+  const handleSendMessage = async (message: string, formattedWords: FormattedWordsType, selectedFileIds: string[]) => {
     setMessages(prev => [...prev, { role: 'user', content: message }]);
     setIsTyping(true);
-
-    // Get the selected files
-    const selectedFiles = selectedFileIds.reduce((acc, id) => {
-      if (files[id]) {
-        acc[id] = files[id];
-      }
-      return acc;
-    }, {} as { [id: string]: FileSystemItem });
+    console.log('FormattedWords in handleSendMessage:', formattedWords);
+    console.log('Sending message:', {
+      message,
+      formattedWords,
+      selectedFileIds
+    });
 
     try {
-      const response = await sendMessage(message, formattedWords, selectedFiles);
-      setMessages(prev => [...prev, { role: 'assistant', content: response }]);
+      const response = await sendMessage(message, formattedWords, selectedFileIds);
+      console.log('Received response:', response);
+      
+      // Create a formatted response string
+      const formattedResponse = `
+        Message: ${response.message}
+        Formatted Content: ${JSON.stringify(response.formatted_content, null, 2)}
+        Selected Files: ${JSON.stringify(response.selected_files, null, 2)}
+      `;
+      
+      setMessages(prev => [...prev, { role: 'assistant', content: formattedResponse }]);
     } catch (error) {
       console.error('Error sending message:', error);
+      if (error instanceof Error) {
+        console.error('Error details:', {
+          name: error.name,
+          message: error.message,
+          stack: error.stack
+        });
+      }
       setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, I encountered an error.' }]);
     }
     setIsTyping(false);
   };
 
   return (
-    <div className="flex flex-col h-64"> {/* Adjust height as needed */}
+    <div className="flex flex-col h-64">
       <div className="flex-grow overflow-auto p-2 space-y-2">
         {messages.map((msg, index) => (
           <ChatMessage key={index} role={msg.role} content={msg.content} />

@@ -1,8 +1,10 @@
-// FormattedWordsContext.tsx
+//src/app/contexts/FormattedWordsContext.tsx
 'use client'
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 
-type FormattedWordsType = {
+export type FormattedWordsProviderProps = { children: React.ReactNode };
+
+export type FormattedWordsType = {
   all_content: string[];
   bold_content: string[];
   italic_content: string[];
@@ -18,7 +20,7 @@ type FormattedWordsContextType = {
 
 const FormattedWordsContext = createContext<FormattedWordsContextType | undefined>(undefined);
 
-export const FormattedWordsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const FormattedWordsProvider: React.FC<FormattedWordsProviderProps> = ({ children })  => {
   const [formattedWords, setFormattedWords] = useState<FormattedWordsType>({
     all_content: [],
     bold_content: [],

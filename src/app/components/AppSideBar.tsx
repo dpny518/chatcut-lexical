@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import Chatbot from '@/app/components/Chatbot/Chatbot'
 import { Editor } from '@/app/text-editor'
+import { useEditorContent } from '@/app/contexts/EditorContentContext';
 
 const FileIcon: React.FC<{ type: FileType }> = ({ type }) => {
   switch (type) {
@@ -22,12 +23,13 @@ interface DropIndicator {
 }
 
 const FileSystemTree: React.FC<{ parentId: string | null }> = ({ parentId }) => {
-  const { files, selectedItems, moveItem, deleteItem, renameItem, createFolder, toggleItemSelection } = useFileSystem()
-  const [openFolders, setOpenFolders] = useState<Set<string>>(new Set())
-  const [dropIndicator, setDropIndicator] = useState<DropIndicator | null>(null)
-  const [newFolderName, setNewFolderName] = useState('')
-  const [editingItemId, setEditingItemId] = useState<string | null>(null)
-  const [isCreatingFolder, setIsCreatingFolder] = useState(false)
+  const { files, moveItem, deleteItem, renameItem, createFolder } = useFileSystem();
+  const { selectedFileIds, setSelectedFileIds } = useEditorContent();
+  const [openFolders, setOpenFolders] = useState<Set<string>>(new Set());
+  const [dropIndicator, setDropIndicator] = useState<DropIndicator | null>(null);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [isCreatingFolder, setIsCreatingFolder] = useState(false);
 
   const toggleFolder = useCallback((folderId: string, e: React.MouseEvent) => {
     e.stopPropagation()
@@ -47,10 +49,59 @@ const FileSystemTree: React.FC<{ parentId: string | null }> = ({ parentId }) => 
     e.dataTransfer.effectAllowed = 'move'
   }
 
+  
+  const sortedItems = Object.values(files)
+  .filter(file => file.parentId === parentId)
+  .sort((a, b) => a.order - b.order);
+  
+const getAllContents = (folderId: string): string[] => {
+  const contents: string[] = [];
+  const queue = [folderId];
+  while (queue.length > 0) {
+    const currentId = queue.shift()!;
+    const item = files[currentId];
+    if (item.type === 'file') {
+      contents.push(currentId);
+    } else if (item.type === 'folder') {
+      const childItems = Object.values(files)
+        .filter(f => f.parentId === currentId)
+        .sort((a, b) => a.order - b.order);
+      childItems.forEach(child => queue.push(child.id));
+    }
+  }
+  return contents;
+};
+
   const handleItemClick = (itemId: string) => {
     console.log("FileSystemTree: Item clicked", itemId);
-    toggleItemSelection(itemId);
-  }
+    setSelectedFileIds((prevSelectedIds: string[]) => {
+      const clickedItem = files[itemId];
+      if (clickedItem.type === 'folder') {
+        // If it's a folder, toggle selection for all its contents
+        const folderContents = getAllContents(itemId);
+        const allSelected = folderContents.every(id => prevSelectedIds.includes(id));
+        if (allSelected) {
+          return prevSelectedIds.filter(id => !folderContents.includes(id));
+        } else {
+          const newSelectedIds = [...prevSelectedIds];
+          folderContents.forEach(id => {
+            if (!newSelectedIds.includes(id)) {
+              newSelectedIds.push(id);
+            }
+          });
+          return newSelectedIds;
+        }
+      } else {
+        // If it's a file, toggle its selection
+        if (prevSelectedIds.includes(itemId)) {
+          return prevSelectedIds.filter(id => id !== itemId);
+        } else {
+          return [...prevSelectedIds, itemId];
+        }
+      }
+    });
+  };
+
   const handleDragOver = (e: DragEvent<HTMLDivElement>, targetId: string, type: FileType) => {
     e.preventDefault()
     e.stopPropagation()
@@ -129,7 +180,7 @@ const FileSystemTree: React.FC<{ parentId: string | null }> = ({ parentId }) => 
     <div
       key={item.id}
       className={`flex items-center gap-2 px-3 py-2 rounded-md cursor-pointer transition-colors ${
-        selectedItems.includes(item.id) ? 'bg-primary/10' : 'hover:bg-muted'
+        selectedFileIds.includes(item.id) ? 'bg-primary/10' : 'hover:bg-muted'
       }`}
       draggable
       onDragStart={(e) => handleDragStart(e, item.id)}
@@ -166,47 +217,46 @@ const FileSystemTree: React.FC<{ parentId: string | null }> = ({ parentId }) => 
     </div>
   )
 
-  const sortedItems = Object.values(files)
-    .filter(file => file.parentId === parentId)
-    .sort((a, b) => a.order - b.order)
+ 
 
-    return (
-      <div className="pl-4 space-y-2">
-        {sortedItems.map(item => (
-          <React.Fragment key={item.id}>
-            {renderItem(item)}
-            {item.type === 'folder' && openFolders.has(item.id) && (
-              <div className="ml-4">
-                <FileSystemTree parentId={item.id} />
-              </div>
-            )}
-          </React.Fragment>
-        ))}
-        {isCreatingFolder ? (
-          <div className="flex items-center space-x-2">
-            <Input
-              value={newFolderName}
-              onChange={(e) => setNewFolderName(e.target.value)}
-              placeholder="New folder name"
-              className="h-8 text-sm flex-grow"
-              onKeyPress={(e) => e.key === 'Enter' && handleCreateFolder()}
-              autoFocus
-            />
-            <Button size="sm" onClick={handleCreateFolder} className="h-8 px-3">
-              Create
-            </Button>
-          </div>
-        ) : (
-          <div 
-            onClick={() => setIsCreatingFolder(true)}
-            className="flex items-center px-2 py-1 rounded-md cursor-pointer text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-200"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            <span className="text-sm">New Folder</span>
-          </div>
-        )}
-      </div>
-    )}
+  return (
+    <div className="pl-4 space-y-2">
+      {sortedItems.map(item => (
+        <React.Fragment key={item.id}>
+          {renderItem(item)}
+          {item.type === 'folder' && openFolders.has(item.id) && (
+            <div className="ml-4">
+              <FileSystemTree parentId={item.id} />
+            </div>
+          )}
+        </React.Fragment>
+      ))}
+      {isCreatingFolder ? (
+        <div className="flex items-center space-x-2">
+          <Input
+            value={newFolderName}
+            onChange={(e) => setNewFolderName(e.target.value)}
+            placeholder="New folder name"
+            className="h-8 text-sm flex-grow"
+            onKeyPress={(e) => e.key === 'Enter' && handleCreateFolder()}
+            autoFocus
+          />
+          <Button size="sm" onClick={handleCreateFolder} className="h-8 px-3">
+            Create
+          </Button>
+        </div>
+      ) : (
+        <div 
+          onClick={() => setIsCreatingFolder(true)}
+          className="flex items-center px-2 py-1 rounded-md cursor-pointer text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-200"
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          <span className="text-sm">New Folder</span>
+        </div>
+      )}
+    </div>
+  )
+}
 
 export function AppSidebar() {
   const { addFile } = useFileSystem();
@@ -219,7 +269,6 @@ export function AppSidebar() {
       console.log("AppSidebar: File upload completed", file.name);
     }
   }
-
 
   return (
     <div className="flex flex-col h-full">
@@ -247,5 +296,4 @@ export function AppSidebar() {
       </div>
     </div>
   )
-
 }
