@@ -4,6 +4,7 @@ import { Inter } from 'next/font/google'
 import { FileSystemProvider } from '@/app/contexts/FileSystemContext'
 import { EditorContentProvider } from '@/app/contexts/EditorContentContext'
 import { DynamicFormattedWordsProvider } from '@/app/components/DynamicFormattedWordsProvider'
+import { PaperCutProvider } from '@/app/contexts/PaperCutContext'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -22,11 +23,13 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <FileSystemProvider>
-          <EditorContentProvider>
-            <DynamicFormattedWordsProvider>
-              {children}
-            </DynamicFormattedWordsProvider>
-          </EditorContentProvider>
+          <PaperCutProvider>
+            <EditorContentProvider>
+              <DynamicFormattedWordsProvider>
+                {children}
+              </DynamicFormattedWordsProvider>
+            </EditorContentProvider>
+          </PaperCutProvider>
         </FileSystemProvider>
       </body>
     </html>

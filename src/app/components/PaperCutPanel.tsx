@@ -1,13 +1,14 @@
 // src/app/components/PaperCutPanel.tsx
-import React, { useState, useCallback } from 'react';
+import React from 'react';
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { X } from "lucide-react";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import {
   Tabs,
   TabsContent,
@@ -15,60 +16,72 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { LexicalEditor } from './LexicalEditor';
+import { usePaperCut } from '@/app/contexts/PaperCutContext';
 
-type PaperCutTab = {
-  id: string;
-  name: string;
-  editorState: string | null;
-};
+interface LexicalEditorProps {
+  initialState: string | null;
+  onChange: (newState: string) => void;
+}
 
 export function PaperCutPanel() {
-  const [tabs, setTabs] = useState<PaperCutTab[]>([
-    { id: '1', name: 'PaperCut 1', editorState: null }
-  ]);
-  const [activeTab, setActiveTab] = useState('1');
+  const { 
+    tabs,
+    activeTabId,
+    createTab,
+    updateTabName,
+    updateTabContent,
+    setActiveTab,
+    getTabs,
+    closeTab
+  } = usePaperCut();
 
-  const handleTabNameChange = useCallback((id: string, newName: string) => {
-    setTabs(prevTabs => prevTabs.map(tab => 
-      tab.id === id ? { ...tab, name: newName } : tab
-    ));
-  }, []);
+  // Only get tabs that are currently active/open
+  const openTabs = getTabs().filter(tab => tab.type === 'file' && tab.active);
 
-  const handleEditorStateChange = useCallback((id: string, newState: string) => {
-    setTabs(prevTabs => prevTabs.map(tab => 
-      tab.id === id ? { ...tab, editorState: newState } : tab
-    ));
-  }, []);
+  if (!activeTabId || openTabs.length === 0) {
+    return (
+      <div className="flex justify-center items-center h-full">
+        <Button onClick={() => createTab()} variant="outline">Create New PaperCut</Button>
+      </div>
+    );
+  }
 
-  const addNewTab = useCallback(() => {
-    setTabs(prevTabs => {
-      const newId = (parseInt(prevTabs[prevTabs.length - 1].id) + 1).toString();
-      const newTab = { id: newId, name: `PaperCut ${newId}`, editorState: null };
-      setActiveTab(newId);
-      return [...prevTabs, newTab];
-    });
-  }, []);
+  const handleCloseTab = (e: React.MouseEvent, tabId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    closeTab(tabId);
+  };
 
   return (
-    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+    <Tabs value={activeTabId} onValueChange={setActiveTab} className="w-full">
       <div className="flex justify-between items-center mb-4">
-        <TabsList>
-          {tabs.map(tab => (
-            <TabsTrigger key={tab.id} value={tab.id}>
-              {tab.name}
-            </TabsTrigger>
+        <TabsList className="w-full justify-start">
+          {openTabs.map(tab => (
+            <div key={tab.id} className="relative flex items-center group">
+              <TabsTrigger value={tab.id} className="pr-8">
+                {tab.name}
+              </TabsTrigger>
+              <span
+                className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 cursor-pointer p-1"
+                onClick={(e) => handleCloseTab(e, tab.id)}
+              >
+                <X className="h-3 w-3" />
+              </span>
+            </div>
           ))}
         </TabsList>
-        <Button onClick={addNewTab} variant="outline">Add Tab</Button>
+        <Button onClick={() => createTab()} variant="outline">Add Tab</Button>
       </div>
-      {tabs.map(tab => (
+      {openTabs.map(tab => (
         <TabsContent key={tab.id} value={tab.id}>
           <Card>
             <CardHeader>
               <CardTitle>
                 <Input
                   value={tab.name}
-                  onChange={(e) => handleTabNameChange(tab.id, e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                    updateTabName(tab.id, e.target.value)
+                  }
                   className="font-bold text-lg"
                 />
               </CardTitle>
@@ -76,7 +89,7 @@ export function PaperCutPanel() {
             <CardContent>
               <LexicalEditor
                 initialState={tab.editorState}
-                onChange={(newState) => handleEditorStateChange(tab.id, newState)}
+                onChange={(newState) => updateTabContent(tab.id, newState)}
               />
             </CardContent>
           </Card>
