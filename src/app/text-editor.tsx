@@ -5,23 +5,16 @@ import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
 import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary';
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
-import { AutoFocusPlugin } from "@lexical/react/LexicalAutoFocusPlugin";
-import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
-import { ListPlugin } from "@lexical/react/LexicalListPlugin";
-import { MarkdownShortcutPlugin } from "@lexical/react/LexicalMarkdownShortcutPlugin";
 import { TabIndentationPlugin } from "@lexical/react/LexicalTabIndentationPlugin";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
 
 import { HeadingNode, QuoteNode } from "@lexical/rich-text";
 import { TableCellNode, TableNode, TableRowNode } from "@lexical/table";
 import { ListItemNode, ListNode } from "@lexical/list";
-import { CodeHighlightNode, CodeNode } from "@lexical/code";
 import { AutoLinkNode, LinkNode } from "@lexical/link";
-import { TRANSFORMERS } from "@lexical/markdown";
+
 
 import ToolbarPlugin from "@/app/plugins/ToolbarPlugin";
-import AutoLinkPlugin from "@/app/plugins/AutoLinkPlugin";
-import CodeHighlightPlugin from "@/app/plugins/CodeHighlightPlugin";
 import {FormattedWordsPlugin} from "@/app/plugins/FormattedWordsPlugin"
 
 import ExampleTheme from "@/app/themes/ExampleTheme";
@@ -47,9 +40,6 @@ const editorConfig = {
         HeadingNode,
         ListNode,
         ListItemNode,
-        QuoteNode,
-        CodeNode,
-        CodeHighlightNode,
         TableNode,
         TableCellNode,
         TableRowNode,
@@ -114,15 +104,9 @@ export function Editor(): JSX.Element | null {
                         placeholder={<Placeholder />}
                         ErrorBoundary={LexicalErrorBoundary}
                     />
-                    <ListPlugin />
                     <HistoryPlugin />
-                    <AutoFocusPlugin />
-                    <CodeHighlightPlugin />
-                    <LinkPlugin />
                     <TabIndentationPlugin />
-                    <AutoLinkPlugin />
                     <FormattedWordsPlugin />
-                    <MarkdownShortcutPlugin transformers={TRANSFORMERS} />
                     <EditorContent />
                 </div>
             </div>

@@ -55,7 +55,6 @@ export class WordNode extends TextNode {
 
   createDOM(config: EditorConfig): HTMLElement {
     const dom = super.createDOM(config);
-    dom.style.borderBottom = '1px dotted #999';
     dom.title = `${this.__startTime} - ${this.__endTime}`;
     return dom;
   }
