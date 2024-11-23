@@ -14,7 +14,6 @@ function EditorContent() {
     const [editor] = useLexicalComposerContext();
     const { files } = useFileSystem();
     const { selectedFileIds, setSelectedFileIds } = useEditorContent();
-
     useEffect(() => {
         console.log("Current Files Structure:", Object.entries(files).map(([id, file]) => ({
             id,
@@ -35,22 +34,16 @@ function EditorContent() {
             const root = $getRoot();
             root.clear();
 
-            // Get the original order of files in the file system
-            const fileSystemOrder = Object.keys(files);
-            
-            // Sort selected files based on their position in the file system
-            const sortedSelectedFiles = selectedFileIds
-                .map(id => ({
-                    id,
-                    originalIndex: fileSystemOrder.indexOf(id)
-                }))
-                .sort((a, b) => a.originalIndex - b.originalIndex)
-                .map(({ id }) => id);
+            // Sort selected files based on their order in the file system
+            const sortedSelectedFiles = Object.entries(files)
+                .filter(([id]) => selectedFileIds.includes(id))
+                .sort(([, a], [, b]) => a.order - b.order)
+                .map(([id]) => id);
 
-            console.log("Files in original system order:", sortedSelectedFiles.map(id => ({
+            console.log("Files in system order:", sortedSelectedFiles.map(id => ({
                 id,
                 name: files[id].name,
-                originalIndex: fileSystemOrder.indexOf(id)
+                order: files[id].order
             })));
 
             sortedSelectedFiles.forEach((itemId) => {
