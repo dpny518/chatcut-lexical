@@ -163,7 +163,7 @@ export const FileSystemProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   
     try {
       console.log('Uploading files:', Array.from(files).map(f => f.name));
-      const response = await fetch('http://localhost:8000/api/v1/multiple_uploads', {
+      const response = await fetch('http://52.76.236.100:8000/api/v1/multiple_uploads', {
         method: 'POST',
         body: formData,
       });
