@@ -955,3 +955,14 @@ i.justify-align {
 .color-option:hover {
   transform: scale(1.1);
 }
+
+/* In your CSS file */
+.dragging {
+  cursor: move;
+  opacity: 0.7;
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.dragging ::selection {
+  background-color: transparent;
+}

@@ -25,6 +25,9 @@ type WordData = [string, string, string, string, string, string, string];
 
 export function CopyPastePlugin() {
   const [editor] = useLexicalComposerContext();
+  const [isDragging, setIsDragging] = React.useState(false);
+
+
 
   React.useEffect(() => {
     // Copy handler
@@ -67,21 +70,31 @@ export function CopyPastePlugin() {
       COMMAND_PRIORITY_LOW
     );
 
+  
+  
     // Drag start handler
     const dragStartHandler = (event: DragEvent) => {
-      const selection = $getSelection();
-      if (!$isRangeSelection(selection)) return;
+      setIsDragging(true);
+      
+      editor.update(() => {
+        const selection = $getSelection();
+        if (!$isRangeSelection(selection)) return;
+      
+        const nodes = selection.getNodes();
+        const dragData = nodes.map(node => {
+          if ($isPaperCutWordNode(node)) {
+            return `${node.getTextContent()}|${node.getStartTime()}|${node.getEndTime()}|${node.getSegmentId()}|${node.getSpeaker()}|${node.getFileId()}|${node.getWordIndex()}`;
+          } else {
+            return node.getTextContent();
+          }
+        }).join(' ');
+      
+        event.dataTransfer?.setData('text/plain', dragData);
+      });
+    };
 
-      const nodes = selection.getNodes();
-      const dragData = nodes.map(node => {
-        if ($isPaperCutWordNode(node)) {
-          return `${node.getTextContent()}|${node.getStartTime()}|${node.getEndTime()}|${node.getSegmentId()}|${node.getSpeaker()}|${node.getFileId()}|${node.getWordIndex()}`;
-        } else {
-          return node.getTextContent();
-        }
-      }).join(' ');
-
-      event.dataTransfer?.setData('text/plain', dragData);
+    const dragEndHandler = () => {
+      setIsDragging(false);
     };
 
     // Drop handler
@@ -212,23 +225,33 @@ const dropHandler = (event: DragEvent) => {
 
     // Add event listeners for drag and drop
     const rootElement = editor.getRootElement();
+    // Add event listeners for drag and drop
     if (rootElement) {
       rootElement.addEventListener('dragstart', dragStartHandler);
+      rootElement.addEventListener('dragend', dragEndHandler);
       rootElement.addEventListener('dragover', (e) => e.preventDefault());
       rootElement.addEventListener('drop', dropHandler);
     }
 
+    // Update dragging class
+    if (isDragging) {
+      rootElement?.classList.add('dragging');
+    } else {
+      rootElement?.classList.remove('dragging');
+    }
+  
     // Clean up
     return () => {
       copyHandler();
       pasteHandler();
       if (rootElement) {
         rootElement.removeEventListener('dragstart', dragStartHandler);
+        rootElement.removeEventListener('dragend', dragEndHandler);
         rootElement.removeEventListener('dragover', (e) => e.preventDefault());
         rootElement.removeEventListener('drop', dropHandler);
       }
     };
-  }, [editor]);
+  }, [editor, isDragging]);
 
   return null;
 }
