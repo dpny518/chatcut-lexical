@@ -185,62 +185,64 @@ const PaperCutTree: React.FC<{ parentId: string | null }> = ({ parentId }) => {
       <div className="pl-4 space-y-2">
         {items.map(item => (
           <React.Fragment key={item.id}>
-            <div
-              className={`flex items-center gap-2 px-3 py-2 rounded-md cursor-pointer transition-colors 
-                ${selectedFileIds.includes(item.id) ? 'bg-primary/10' : 'hover:bg-muted'}
-                ${item.type === 'folder' && isAllContentsSelected(item.id) ? 'ring-2 ring-primary' : ''}
-                ${item.active && item.type === 'file' ? 'font-medium' : ''}`}
-              draggable
-              onDragStart={(e) => handleDragStart(e, item.id)}
-              onDragOver={(e) => handleDragOver(e, item.id, item.type)}
-              onDragLeave={handleDragLeave}
-              onDrop={(e) => handleDrop(e, item.id)}
-              onClick={(e) => handleItemClick(item.id, e)}
-            >
-              {item.type === 'folder' && (
-                <span className="text-muted-foreground">
-                  {openFolders.has(item.id) ? 
-                    <ChevronDown className="w-4 h-4" /> : 
-                    <ChevronRight className="w-4 h-4" />
-                  }
-                </span>
-              )}
-              {item.type === 'folder' ? 
-                <Folder className="w-4 h-4" /> : 
-                <FileText className="w-4 h-4" />
-              }
-              {editingItemId === item.id ? (
-                <Input
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  onBlur={() => handleRenameSubmit(item.id)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleRenameSubmit(item.id)}
-                  className="h-7 text-sm"
-                  onClick={(e) => e.stopPropagation()}
-                  autoFocus
-                />
-              ) : (
-                <span className="text-sm truncate flex-grow">
-                  {item.name}
-                </span>
-              )}
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={(e) => handleRename(e, item.id, item.name)} 
-                className="h-7 w-7 opacity-0 group-hover:opacity-100"
-              >
-                <Edit2 className="w-4 h-4" />
-              </Button>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={(e) => handleDelete(e, item.id)} 
-                className="h-7 w-7 opacity-0 group-hover:opacity-100"
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
-            </div>
+                      <div
+                        className={`group flex items-center gap-2 px-3 py-2 rounded-md cursor-pointer transition-colors 
+                          ${selectedFileIds.includes(item.id) ? 'bg-primary/10' : 'hover:bg-muted/50'}
+                          ${item.type === 'folder' && isAllContentsSelected(item.id) ? 'ring-1 ring-muted-foreground/20' : ''}
+                          ${item.active && item.type === 'file' ? 'font-medium' : ''}`}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, item.id)}
+                        onDragOver={(e) => handleDragOver(e, item.id, item.type)}
+                        onDragLeave={handleDragLeave}
+                        onDrop={(e) => handleDrop(e, item.id)}
+                        onClick={(e) => handleItemClick(item.id, e)}
+                      >
+                  <div className="flex-1 flex items-center gap-2 min-w-0">
+                    {item.type === 'folder' && (
+                      <span className="text-muted-foreground">
+                        {openFolders.has(item.id) ? 
+                          <ChevronDown className="w-4 h-4" /> : 
+                          <ChevronRight className="w-4 h-4" />
+                        }
+                      </span>
+                    )}
+                    {item.type === 'folder' ? 
+                      <Folder className="w-4 h-4 text-muted-foreground" /> : 
+                      <FileText className="w-4 h-4 text-muted-foreground" />
+                    }
+                    {editingItemId === item.id ? (
+                      <Input
+                        value={newName}
+                        onChange={(e) => setNewName(e.target.value)}
+                        onBlur={() => handleRenameSubmit(item.id)}
+                        onKeyPress={(e) => e.key === 'Enter' && handleRenameSubmit(item.id)}
+                        className="h-7 text-sm"
+                        onClick={(e) => e.stopPropagation()}
+                        autoFocus
+                      />
+                    ) : (
+                      <span className="text-sm truncate">
+                        {item.name}
+                      </span>
+                    )}
+                  </div>
+                  
+                  {/* Action buttons container */}
+                  <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={(e) => handleRename(e, item.id, item.name)}
+                      className="p-1 rounded hover:bg-muted/80 text-muted-foreground"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={(e) => handleDelete(e, item.id)}
+                      className="p-1 rounded hover:bg-muted/80 text-muted-foreground"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
             
             {item.type === 'folder' && openFolders.has(item.id) && (
               <PaperCutTree parentId={item.id} />
