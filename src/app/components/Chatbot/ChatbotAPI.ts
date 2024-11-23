@@ -20,7 +20,7 @@ export const sendMessage = async (
       selectedFileIds
     });
 
-    const response = await axios.post<ChatResponse>('http://localhost:8000/api/v1/chat', {
+    const response = await axios.post<ChatResponse>('http://52.76.236.100:8000/api/v1/chat', {
       message: prompt,
       formatted_content: formattedWords,
       selected_files: Object.fromEntries(selectedFileIds.map(id => [id, {}]))
