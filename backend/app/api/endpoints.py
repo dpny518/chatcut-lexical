@@ -1,10 +1,10 @@
 #app/api/endpoints.py
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, UploadFile, File, HTTPException, Form
 from app.services.file_processor import process_file
 from app.services.storage_handler import get_processed_file
 import logging
 from pydantic import BaseModel
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -25,7 +25,25 @@ async def upload_file(file: UploadFile = File(...), user_id: str = "default_user
     except Exception as e:
         logger.error(f"Error processing file: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+    
+@router.post("/multiple_uploads")
+async def upload_multiple_files(
+    files: List[UploadFile] = File(...),
+    user_id: str = Form("default_user")
+):
+    logger.info(f"Received multiple files, user_id: {user_id}")
+    results = {}
 
+    for file in files:
+        try:
+            result = await process_file(file, user_id)
+            results[file.filename] = result
+            logger.info(f"File processed successfully: {file.filename}")
+        except Exception as e:
+            logger.error(f"Error processing file {file.filename}: {str(e)}", exc_info=True)
+            results[file.filename] = {"error": str(e)}
+
+    return results
 @router.get("/processed/{user_id}/{file_id}")
 async def get_processed(user_id: str, file_id: str):
     processed_data = get_processed_file(user_id, file_id)

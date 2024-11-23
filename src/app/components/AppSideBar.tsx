@@ -291,14 +291,14 @@ const handleItemClick = useCallback((itemId: string, event: React.MouseEvent) =>
 }
 
 export function AppSidebar() {
-  const { addFile } = useFileSystem();
+  const { addFiles } = useFileSystem();
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file) {
-      console.log("AppSidebar: File upload started", file.name);
-      await addFile(file, null) // null indicates root level
-      console.log("AppSidebar: File upload completed", file.name);
+    const files = event.target.files;
+    if (files && files.length > 0) {
+      console.log("AppSidebar: File upload started", Array.from(files).map(f => f.name));
+      await addFiles(files, null); // null indicates root level
+      console.log("AppSidebar: File upload completed");
     }
   }
 
@@ -320,7 +320,7 @@ export function AppSidebar() {
             className="hidden"
             onChange={handleFileUpload}
           />
-<FileSystemTree parentId={null} />
+          <FileSystemTree parentId={null} />
         </div>
       </div>
       <div className="border-t border-border p-4">

@@ -18,6 +18,7 @@ interface FileSystemContextType {
   files: { [id: string]: FileSystemItem }
   selectedItems: string[]
   addFile: (file: File, parentId: string | null) => Promise<void>
+  addFiles: (files: FileList, parentId: string | null) => Promise<void>
   createFolder: (name: string, parentId: string | null) => void
   moveItem: (itemId: string, newParentId: string | null, beforeId: string | null) => void
   deleteItem: (itemId: string) => void
@@ -152,6 +153,56 @@ export const FileSystemProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       }
     }
   }, []);
+ 
+  const addFiles = useCallback(async (files: FileList, parentId: string | null) => {
+    const formData = new FormData();
+    Array.from(files).forEach((file) => {
+      formData.append('files', file);
+    });
+    formData.append('user_id', 'default_user'); // You can replace 'default_user' with actual user ID if available
+  
+    try {
+      console.log('Uploading files:', Array.from(files).map(f => f.name));
+      const response = await fetch('http://localhost:8000/api/v1/multiple_uploads', {
+        method: 'POST',
+        body: formData,
+      });
+  
+      if (!response.ok) {
+        const responseText = await response.text();
+        throw new Error(`HTTP error! status: ${response.status}, message: ${responseText}`);
+      }
+  
+      const results = await response.json();
+      console.log('Parsed server response:', results);
+  
+      setFiles(prev => {
+        const newFiles = { ...prev };
+        Object.entries(results).forEach(([filename, result]: [string, any]) => {
+          const id = result.file_info.file_id;
+          const directoryItems = getDirectoryItems(parentId);
+          const lastItem = directoryItems[directoryItems.length - 1];
+          const order = lastItem ? lastItem.order + 1000 : 1000;
+  
+          newFiles[id] = {
+            id,
+            name: filename,
+            type: filename.match(/\.(jpg|jpeg|png|gif)$/i) ? 'image' : 'file',
+            parentId,
+            order,
+            content: JSON.stringify(result)
+          };
+        });
+        return newFiles;
+      });
+  
+      console.log('Files added successfully');
+      setErrorState(null);
+    } catch (error) {
+      console.error('Error uploading files:', error);
+      setErrorState(`Error uploading files: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }, []);
   
   const createFolder = useCallback((name: string, parentId: string | null) => {
     const id = Math.random().toString(36).substr(2, 9)
@@ -274,6 +325,7 @@ export const FileSystemProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     files,
     selectedItems,
     addFile,
+    addFiles,
     createFolder,
     moveItem,
     deleteItem,
