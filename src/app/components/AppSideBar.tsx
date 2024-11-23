@@ -71,6 +71,10 @@ const getAllContents = (folderId: string): string[] => {
   }
   return contents;
 };
+const isAllContentsSelected = (folderId: string): boolean => {
+  const contents = getAllContents(folderId);
+  return contents.every(id => selectedFileIds.includes(id));
+};
 
 const handleItemClick = useCallback((itemId: string, event: React.MouseEvent) => {
   console.log("FileSystemTree: Item clicked", itemId);
@@ -81,9 +85,21 @@ const handleItemClick = useCallback((itemId: string, event: React.MouseEvent) =>
     // Handle Ctrl/Cmd key (multi-select)
     if (event.ctrlKey || event.metaKey) {
       if (prevSelectedIds.includes(itemId)) {
-        return prevSelectedIds.filter(id => id !== itemId);
+        // Unselect the item and its contents if it's a folder
+        if (clickedItem.type === 'folder') {
+          const folderContents = getAllContents(itemId);
+          return prevSelectedIds.filter(id => !folderContents.includes(id));
+        } else {
+          return prevSelectedIds.filter(id => id !== itemId);
+        }
       } else {
-        return [...prevSelectedIds, itemId];
+        // Select the item and its contents if it's a folder
+        if (clickedItem.type === 'folder') {
+          const folderContents = getAllContents(itemId);
+          return Array.from(new Set([...prevSelectedIds, ...folderContents]));
+        } else {
+          return [...prevSelectedIds, itemId];
+        }
       }
     }
     
@@ -92,15 +108,20 @@ const handleItemClick = useCallback((itemId: string, event: React.MouseEvent) =>
       const start = sortedItems.findIndex(item => item.id === lastSelectedId);
       const end = sortedItems.findIndex(item => item.id === itemId);
       const range = sortedItems.slice(Math.min(start, end), Math.max(start, end) + 1);
-      return range.map(item => item.id);
+      return Array.from(new Set(range.flatMap(item => item.type === 'folder' ? getAllContents(item.id) : item.id)));
     }
     
-    // Normal click (single select)
-    if (clickedItem.type === 'folder') {
-      const folderContents = getAllContents(itemId);
-      return folderContents;
+    // Normal click (single select or unselect)
+    if (prevSelectedIds.length === 1 && prevSelectedIds[0] === itemId) {
+      // If the clicked item is the only selected item, unselect it
+      return [];
     } else {
-      return [itemId];
+      // Otherwise, select only this item (or its contents if it's a folder)
+      if (clickedItem.type === 'folder') {
+        return getAllContents(itemId);
+      } else {
+        return [itemId];
+      }
     }
   });
 }, [files, setSelectedFileIds, setLastSelectedId, lastSelectedId, sortedItems]);
@@ -179,46 +200,54 @@ const handleItemClick = useCallback((itemId: string, event: React.MouseEvent) =>
     }
   }
 
-  const renderItem = (item: FileSystemItem) => (
-    <div
-    key={item.id}
-    className={`flex items-center gap-2 px-3 py-2 rounded-md cursor-pointer transition-colors ${
-      selectedFileIds.includes(item.id) ? 'bg-primary/10' : 'hover:bg-muted'
-    }`}
-    draggable
-    onDragStart={(e) => handleDragStart(e, item.id)}
-    onDragOver={(e) => handleDragOver(e, item.id, item.type)}
-    onDragLeave={handleDragLeave}
-    onDrop={(e) => handleDrop(e, item.id)}
-    onClick={(e) => handleItemClick(item.id, e)}
-  >
-      {item.type === 'folder' && (
-        <span onClick={(e) => toggleFolder(item.id, e)} className="text-muted-foreground">
-          {openFolders.has(item.id) ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-        </span>
-      )}
-      <FileIcon type={item.type} />
-      {editingItemId === item.id ? (
-        <Input
-          value={newFolderName}
-          onChange={(e) => setNewFolderName(e.target.value)}
-          onBlur={() => handleRenameSubmit(item.id)}
-          onKeyPress={(e) => e.key === 'Enter' && handleRenameSubmit(item.id)}
-          className="h-7 text-sm"
-          onClick={(e) => e.stopPropagation()}
-          autoFocus
-        />
-      ) : (
-        <span className="text-sm truncate flex-grow">{item.name}</span>
-      )}
-      <Button variant="ghost" size="icon" onClick={(e) => handleRename(e, item.id)} className="h-7 w-7">
-        <Edit2 className="w-4 h-4" />
-      </Button>
-      <Button variant="ghost" size="icon" onClick={(e) => handleDelete(e, item.id)} className="h-7 w-7">
-        <Trash2 className="w-4 h-4" />
-      </Button>
-    </div>
-  )
+  const renderItem = (item: FileSystemItem) => {
+    const isFolder = item.type === 'folder';
+    const isSelected = selectedFileIds.includes(item.id);
+    const isFullySelected = isFolder && isAllContentsSelected(item.id);
+  
+    return (
+      <div
+      key={item.id}
+      className={`flex items-center gap-2 px-3 py-2 rounded-md cursor-pointer transition-colors ${
+        isSelected || isFullySelected ? 'bg-primary/10' : 'hover:bg-muted'
+      } ${
+        isFullySelected ? 'ring-2 ring-primary' : ''
+      }`}
+      draggable
+      onDragStart={(e) => handleDragStart(e, item.id)}
+      onDragOver={(e) => handleDragOver(e, item.id, item.type)}
+      onDragLeave={handleDragLeave}
+      onDrop={(e) => handleDrop(e, item.id)}
+      onClick={(e) => handleItemClick(item.id, e)}
+      >
+        {isFolder && (
+          <span onClick={(e) => toggleFolder(item.id, e)} className="text-muted-foreground">
+            {openFolders.has(item.id) ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+          </span>
+        )}
+        <FileIcon type={item.type} />
+        {editingItemId === item.id ? (
+          <Input
+            value={newFolderName}
+            onChange={(e) => setNewFolderName(e.target.value)}
+            onBlur={() => handleRenameSubmit(item.id)}
+            onKeyPress={(e) => e.key === 'Enter' && handleRenameSubmit(item.id)}
+            className="h-7 text-sm"
+            onClick={(e) => e.stopPropagation()}
+            autoFocus
+          />
+        ) : (
+          <span className={`text-sm truncate flex-grow ${isFullySelected ? 'font-semibold' : ''}`}>{item.name}</span>
+        )}
+        <Button variant="ghost" size="icon" onClick={(e) => handleRename(e, item.id)} className="h-7 w-7">
+          <Edit2 className="w-4 h-4" />
+        </Button>
+        <Button variant="ghost" size="icon" onClick={(e) => handleDelete(e, item.id)} className="h-7 w-7">
+          <Trash2 className="w-4 h-4" />
+        </Button>
+      </div>
+    );
+  };
 
  
 
