@@ -24,7 +24,7 @@ interface DropIndicator {
 
 const FileSystemTree: React.FC<{ parentId: string | null }> = ({ parentId }) => {
   const { files, moveItem, deleteItem, renameItem, createFolder } = useFileSystem();
-  const { selectedFileIds, setSelectedFileIds } = useEditorContent();
+  const { selectedFileIds, setSelectedFileIds, lastSelectedId, setLastSelectedId } = useEditorContent();
   const [openFolders, setOpenFolders] = useState<Set<string>>(new Set());
   const [dropIndicator, setDropIndicator] = useState<DropIndicator | null>(null);
   const [newFolderName, setNewFolderName] = useState('');
@@ -72,35 +72,38 @@ const getAllContents = (folderId: string): string[] => {
   return contents;
 };
 
-  const handleItemClick = (itemId: string) => {
-    console.log("FileSystemTree: Item clicked", itemId);
-    setSelectedFileIds((prevSelectedIds: string[]) => {
-      const clickedItem = files[itemId];
-      if (clickedItem.type === 'folder') {
-        // If it's a folder, toggle selection for all its contents
-        const folderContents = getAllContents(itemId);
-        const allSelected = folderContents.every(id => prevSelectedIds.includes(id));
-        if (allSelected) {
-          return prevSelectedIds.filter(id => !folderContents.includes(id));
-        } else {
-          const newSelectedIds = [...prevSelectedIds];
-          folderContents.forEach(id => {
-            if (!newSelectedIds.includes(id)) {
-              newSelectedIds.push(id);
-            }
-          });
-          return newSelectedIds;
-        }
+const handleItemClick = useCallback((itemId: string, event: React.MouseEvent) => {
+  console.log("FileSystemTree: Item clicked", itemId);
+  setLastSelectedId(itemId);
+  setSelectedFileIds((prevSelectedIds: string[]) => {
+    const clickedItem = files[itemId];
+    
+    // Handle Ctrl/Cmd key (multi-select)
+    if (event.ctrlKey || event.metaKey) {
+      if (prevSelectedIds.includes(itemId)) {
+        return prevSelectedIds.filter(id => id !== itemId);
       } else {
-        // If it's a file, toggle its selection
-        if (prevSelectedIds.includes(itemId)) {
-          return prevSelectedIds.filter(id => id !== itemId);
-        } else {
-          return [...prevSelectedIds, itemId];
-        }
+        return [...prevSelectedIds, itemId];
       }
-    });
-  };
+    }
+    
+    // Handle Shift key (range select)
+    if (event.shiftKey && lastSelectedId) {
+      const start = sortedItems.findIndex(item => item.id === lastSelectedId);
+      const end = sortedItems.findIndex(item => item.id === itemId);
+      const range = sortedItems.slice(Math.min(start, end), Math.max(start, end) + 1);
+      return range.map(item => item.id);
+    }
+    
+    // Normal click (single select)
+    if (clickedItem.type === 'folder') {
+      const folderContents = getAllContents(itemId);
+      return folderContents;
+    } else {
+      return [itemId];
+    }
+  });
+}, [files, setSelectedFileIds, setLastSelectedId, lastSelectedId, sortedItems]);
 
   const handleDragOver = (e: DragEvent<HTMLDivElement>, targetId: string, type: FileType) => {
     e.preventDefault()
@@ -178,17 +181,17 @@ const getAllContents = (folderId: string): string[] => {
 
   const renderItem = (item: FileSystemItem) => (
     <div
-      key={item.id}
-      className={`flex items-center gap-2 px-3 py-2 rounded-md cursor-pointer transition-colors ${
-        selectedFileIds.includes(item.id) ? 'bg-primary/10' : 'hover:bg-muted'
-      }`}
-      draggable
-      onDragStart={(e) => handleDragStart(e, item.id)}
-      onDragOver={(e) => handleDragOver(e, item.id, item.type)}
-      onDragLeave={handleDragLeave}
-      onDrop={(e) => handleDrop(e, item.id)}
-      onClick={() => handleItemClick(item.id)}
-    >
+    key={item.id}
+    className={`flex items-center gap-2 px-3 py-2 rounded-md cursor-pointer transition-colors ${
+      selectedFileIds.includes(item.id) ? 'bg-primary/10' : 'hover:bg-muted'
+    }`}
+    draggable
+    onDragStart={(e) => handleDragStart(e, item.id)}
+    onDragOver={(e) => handleDragOver(e, item.id, item.type)}
+    onDragLeave={handleDragLeave}
+    onDrop={(e) => handleDrop(e, item.id)}
+    onClick={(e) => handleItemClick(item.id, e)}
+  >
       {item.type === 'folder' && (
         <span onClick={(e) => toggleFolder(item.id, e)} className="text-muted-foreground">
           {openFolders.has(item.id) ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
@@ -288,7 +291,7 @@ export function AppSidebar() {
             className="hidden"
             onChange={handleFileUpload}
           />
-          <FileSystemTree parentId={null} />
+<FileSystemTree parentId={null} />
         </div>
       </div>
       <div className="border-t border-border p-4">

@@ -3,16 +3,18 @@
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { useFileSystem } from './FileSystemContext';
 
-
 type EditorContentContextType = {
   selectedFileIds: string[];
   setSelectedFileIds: React.Dispatch<React.SetStateAction<string[]>>;
+  lastSelectedId: string | null;
+  setLastSelectedId: React.Dispatch<React.SetStateAction<string | null>>;
 };
 
 const EditorContentContext = createContext<EditorContentContextType | undefined>(undefined);
 
 export const EditorContentProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [selectedFileIds, setSelectedFileIds] = useState<string[]>([]);
+  const [lastSelectedId, setLastSelectedId] = useState<string | null>(null);
   const { files } = useFileSystem();
 
   useEffect(() => {
@@ -44,11 +46,16 @@ export const EditorContentProvider: React.FC<{ children: ReactNode }> = ({ child
   };
 
   return (
-    <EditorContentContext.Provider value={{ selectedFileIds, setSelectedFileIds: setSelectedFileIdsWithLogging }}>
+    <EditorContentContext.Provider value={{ 
+      selectedFileIds, 
+      setSelectedFileIds: setSelectedFileIdsWithLogging,
+      lastSelectedId,
+      setLastSelectedId,
+    }}>
       {children}
     </EditorContentContext.Provider>
   );
-};
+}
 
 export const useEditorContent = () => {
   const context = useContext(EditorContentContext);

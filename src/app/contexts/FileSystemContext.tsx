@@ -33,7 +33,7 @@ export const FileSystemProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [files, setFiles] = useState<{ [id: string]: FileSystemItem }>({})
   const [selectedItems, setSelectedItems] = useState<string[]>([])
   const [errorState, setErrorState] = useState<string | null>(null)
-
+  const [lastSelectedId, setLastSelectedId] = useState<string | null>(null);
   // Helper functions remain the same
   const getDirectoryItems = (parentId: string | null) => {
     return Object.values(files)
@@ -62,7 +62,7 @@ export const FileSystemProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   
     try {
       console.log('Uploading file:', file.name);
-      const response = await fetch('http://52.76.236.100:8000/api/v1/upload', {
+      const response = await fetch('http://localhost:8000/api/v1/upload', {
         method: 'POST',
         body: formData,
       });
