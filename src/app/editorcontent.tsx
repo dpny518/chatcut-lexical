@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { $getRoot, $createTextNode, $getSelection, $isRangeSelection } from 'lexical';
 import { COPY_COMMAND, COMMAND_PRIORITY_LOW } from 'lexical';
@@ -14,6 +14,39 @@ function EditorContent() {
     const [editor] = useLexicalComposerContext();
     const { files } = useFileSystem();
     const { selectedFileIds, setSelectedFileIds } = useEditorContent();
+
+    const handleDragStart = useCallback((event: DragEvent) => {
+        editor.getEditorState().read(() => {
+            const selection = $getSelection();
+            if (!$isRangeSelection(selection)) return;
+
+            const nodes = selection.getNodes();
+            const dragData = nodes
+                .filter($isWordNode)
+                .map((node: WordNode) => {
+                    return `${node.getTextContent()}|${node.getStartTime()}|${node.getEndTime()}|${node.getSegmentId()}|${node.getSpeaker()}|${node.getFileId()}|${node.getWordIndex()}`;
+                })
+                .join(' ');
+
+            if (dragData) {
+                event.dataTransfer?.setData('text/plain', dragData);
+                event.dataTransfer!.effectAllowed = 'copy';
+                console.log('Dragged content:', dragData);
+            }
+        });
+    }, [editor]);
+
+    useEffect(() => {
+        const rootElement = editor.getRootElement();
+        if (!rootElement) return;
+
+        rootElement.addEventListener('dragstart', handleDragStart);
+
+        return () => {
+            rootElement.removeEventListener('dragstart', handleDragStart);
+        };
+    }, [editor, handleDragStart]);
+
     useEffect(() => {
         console.log("Current Files Structure:", Object.entries(files).map(([id, file]) => ({
             id,
@@ -117,6 +150,7 @@ function EditorContent() {
             console.log("Finished processing all files");
         });
     }, [editor, files, selectedFileIds]);
+
     useEffect(() => {
         return editor.registerCommand(
             COPY_COMMAND,
