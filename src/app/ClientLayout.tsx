@@ -6,6 +6,7 @@ import { EditorContentProvider } from '@/app/contexts/EditorContentContext'
 import { DynamicFormattedWordsProvider } from '@/app/components/DynamicFormattedWordsProvider'
 import { PaperCutProvider } from '@/app/contexts/PaperCutContext'
 import { EditorProvider } from '@/app/contexts/EditorContext'
+import { DragDropWrapper } from '@/app/components/DragDropWrapper'
 
 interface ClientLayoutProps {
   children: React.ReactNode
@@ -19,7 +20,7 @@ export default function ClientLayout({ children, className }: ClientLayoutProps)
       e.stopPropagation()
     }
 
-    // Add event listeners to prevent file drops
+    // Add event listeners to prevent default file drops
     window.addEventListener('dragover', preventDefault)
     window.addEventListener('drop', preventDefault)
 
@@ -31,17 +32,15 @@ export default function ClientLayout({ children, className }: ClientLayoutProps)
   }, [])
 
   return (
-    <body 
-      className={`${className} overflow-hidden`}
-      onDragOver={(e) => e.preventDefault()}
-      onDrop={(e) => e.preventDefault()}
-    >
+    <body className={`${className} overflow-hidden`}>
       <FileSystemProvider>
         <EditorContentProvider>
           <PaperCutProvider>
             <EditorProvider>
               <DynamicFormattedWordsProvider>
-                {children}
+                <DragDropWrapper>
+                  {children}
+                </DragDropWrapper>
               </DynamicFormattedWordsProvider>
             </EditorProvider>
           </PaperCutProvider>
