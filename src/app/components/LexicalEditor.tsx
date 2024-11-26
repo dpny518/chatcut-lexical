@@ -1,4 +1,4 @@
-'use client';
+'use client'
 
 import React, { useCallback, useMemo, useEffect, useRef } from 'react';
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
@@ -7,17 +7,15 @@ import { ContentEditable } from "@lexical/react/LexicalContentEditable";
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin';
 import LexicalErrorBoundary from '@lexical/react/LexicalErrorBoundary';
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
-import { 
-  EditorState, 
-  LexicalEditor as LexicalEditorType,
-  $getRoot,
-  $createParagraphNode,
-  $createTextNode
-} from 'lexical';
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { EditorState, LexicalEditor as LexicalEditorType } from 'lexical';
 import { PaperCutWordNode } from '@/app/nodes/PaperCutWordNode';
 import { PaperCutSpeakerNode } from '@/app/nodes/PaperCutSpeakerNode';
 import { PaperCutSegmentNode } from '@/app/nodes/PaperCutSegmentNode';
+import { CopyPastePlugin } from '@/app/plugins/CopyPastePlugin';
+import { WordHoverPlugin } from '@/app/plugins/WordHoverPlugin';
+import { EditRestrictionPlugin } from '@/app/plugins/EditRestrictionPlugin';
+import ToolbarPlugin from '@/app/plugins/ToolbarPlugin';
 import { useEditors } from '@/app/contexts/EditorContext';
 
 interface LexicalEditorProps {
@@ -42,17 +40,6 @@ function LexicalEditorComponent({ initialState, onChange, tabId }: LexicalEditor
     onChange(JSON.stringify(editorState));
   }, [onChange]);
 
-  const editorConfig = useMemo(() => ({
-    namespace: `PaperCutEditor-${tabId}`,
-    onError: (error: Error) => console.error(error),
-    editorState: initialState,
-    nodes: [
-      PaperCutWordNode,
-      PaperCutSpeakerNode,
-      PaperCutSegmentNode
-    ]
-  }), [initialState, tabId]);
-
   // New function to handle editor creation
   const handleEditorCreation = useCallback((editor: LexicalEditorType) => {
     console.log(`LexicalEditor: Editor created for tab ${tabId}`);
@@ -71,10 +58,22 @@ function LexicalEditorComponent({ initialState, onChange, tabId }: LexicalEditor
     };
   }, [unregisterPaperCutEditor, tabId]);
 
+  const editorConfig = useMemo(() => ({
+    namespace: `PaperCutEditor-${tabId}`,
+    onError: (error: Error) => console.error(error),
+    editorState: initialState,
+    nodes: [
+      PaperCutWordNode,
+      PaperCutSpeakerNode,
+      PaperCutSegmentNode
+    ]
+  }), [initialState, tabId]);
+
   return (
     <LexicalComposer initialConfig={editorConfig}>
       <div className="editor-container relative">
         <AutoFocus />
+        <ToolbarPlugin />
         <RichTextPlugin
           contentEditable={
             <ContentEditable 
@@ -90,14 +89,17 @@ function LexicalEditorComponent({ initialState, onChange, tabId }: LexicalEditor
           ErrorBoundary={LexicalErrorBoundary}
         />
         <HistoryPlugin />
+        <CopyPastePlugin />
         <OnChangePlugin onChange={handleChange} />
+        <WordHoverPlugin />
+        <EditRestrictionPlugin />
         <RegisterEditorPlugin onEditorCreated={handleEditorCreation} />
       </div>
     </LexicalComposer>
   );
 }
 
-// New plugin to handle editor registration
+// Plugin to handle editor registration
 function RegisterEditorPlugin({ onEditorCreated }: { onEditorCreated: (editor: LexicalEditorType) => void }) {
   const [editor] = useLexicalComposerContext();
   
