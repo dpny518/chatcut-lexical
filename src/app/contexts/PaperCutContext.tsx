@@ -1,7 +1,6 @@
 // src/app/contexts/PaperCutContext.tsx
 'use client'
-
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react'
+import React, { createContext, useContext, useState, useCallback, useRef } from 'react'
 import { useEditorContent } from '@/app/contexts/EditorContentContext'
 
 export type PaperCutType = 'file' | 'folder';
@@ -35,15 +34,23 @@ interface PaperCutContextType {
 
 const PaperCutContext = createContext<PaperCutContextType | undefined>(undefined);
 
+// Counter for generating unique IDs
+let nextId = 1;
+
 export const PaperCutProvider: React.FC<{ 
   children: React.ReactNode 
 }> = ({ children }) => {
   const [tabs, setTabs] = useState<{ [id: string]: PaperCutTab }>({});
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
-  
+  const initialRenderRef = useRef(true);
 
+  // Generate a unique ID without using Date.now()
+  const generateId = useCallback((prefix: string) => {
+    return `${prefix}-${nextId++}`;
+  }, []);
+  
   const createTab = useCallback((name?: string, parentId: string | null = null) => {
-    const id = `papercut-${Date.now()}`;
+    const id = generateId('papercut');
     const siblingTabs = Object.values(tabs).filter(t => t.parentId === parentId);
     const maxOrder = Math.max(0, ...siblingTabs.map(t => t.order));
     
@@ -54,7 +61,7 @@ export const PaperCutProvider: React.FC<{
       editorState: null,
       parentId,
       active: true,
-      createdAt: Date.now(),
+      createdAt: nextId, // Use counter instead of timestamp
       order: maxOrder + 1000
     };
 
@@ -64,10 +71,10 @@ export const PaperCutProvider: React.FC<{
     }));
     setActiveTabId(id);
     return id;
-  }, [tabs]);
+  }, [tabs, generateId]);
 
   const createFolder = useCallback((name: string, parentId: string | null = null) => {
-    const id = `folder-${Date.now()}`;
+    const id = generateId('folder');
     const siblingTabs = Object.values(tabs).filter(t => t.parentId === parentId);
     const maxOrder = Math.max(0, ...siblingTabs.map(t => t.order));
     
@@ -78,7 +85,7 @@ export const PaperCutProvider: React.FC<{
       editorState: null,
       parentId,
       active: false,
-      createdAt: Date.now(),
+      createdAt: nextId, // Use counter instead of timestamp
       order: maxOrder + 1000
     };
 
@@ -87,8 +94,7 @@ export const PaperCutProvider: React.FC<{
       [id]: newFolder
     }));
     return id;
-  }, [tabs]);
-
+  }, [tabs, generateId]);
   const deleteTab = useCallback((id: string) => {
     setTabs(prev => {
       const newTabs = { ...prev };

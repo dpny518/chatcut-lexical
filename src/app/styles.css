@@ -511,6 +511,32 @@ pre::-webkit-scrollbar-thumb {
   margin-right: 10px;
   pointer-events: none;
 }
+.toolbar-item.add-to-papercut {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.toolbar-item.add-to-papercut:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.toolbar-item.add-to-papercut.active {
+  background-color: #e2e8f0;
+}
+
+.toolbar-item.add-to-papercut .format {
+  display: flex;
+  align-items: center;
+}
+
+.toolbar-item.add-to-papercut .text {
+  margin-left: 4px;
+  font-size: 14px;
+}
 
 i.chevron-down {
   background-color: transparent;
@@ -968,4 +994,14 @@ i.justify-align {
 
 .dragging ::selection {
   background-color: transparent;
+}
+
+.editor-container ::selection {
+  background: #007bff; /* Light blue background */
+  color: #fff; /* White text */
+}
+
+.editor-container ::-webkit-selection {
+  background: #007bff;
+  color: #fff;
 }

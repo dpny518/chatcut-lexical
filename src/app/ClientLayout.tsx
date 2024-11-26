@@ -1,4 +1,3 @@
-// src/app/ClientLayout.tsx
 'use client'
 
 import { useEffect } from 'react'
@@ -6,6 +5,7 @@ import { FileSystemProvider } from '@/app/contexts/FileSystemContext'
 import { EditorContentProvider } from '@/app/contexts/EditorContentContext'
 import { DynamicFormattedWordsProvider } from '@/app/components/DynamicFormattedWordsProvider'
 import { PaperCutProvider } from '@/app/contexts/PaperCutContext'
+import { EditorProvider } from '@/app/contexts/EditorContext'
 
 interface ClientLayoutProps {
   children: React.ReactNode
@@ -37,13 +37,15 @@ export default function ClientLayout({ children, className }: ClientLayoutProps)
       onDrop={(e) => e.preventDefault()}
     >
       <FileSystemProvider>
-        <PaperCutProvider>
-          <EditorContentProvider>
-            <DynamicFormattedWordsProvider>
-              {children}
-            </DynamicFormattedWordsProvider>
-          </EditorContentProvider>
-        </PaperCutProvider>
+        <EditorContentProvider>
+          <PaperCutProvider>
+            <EditorProvider>
+              <DynamicFormattedWordsProvider>
+                {children}
+              </DynamicFormattedWordsProvider>
+            </EditorProvider>
+          </PaperCutProvider>
+        </EditorContentProvider>
       </FileSystemProvider>
 
       <style jsx global>{`
