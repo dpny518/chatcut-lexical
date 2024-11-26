@@ -1,10 +1,8 @@
+// src/app/layout.tsx
 import { Metadata } from 'next'
 import '@/app/globals.css'
 import { Inter } from 'next/font/google'
-import { FileSystemProvider } from '@/app/contexts/FileSystemContext'
-import { EditorContentProvider } from '@/app/contexts/EditorContentContext'
-import { DynamicFormattedWordsProvider } from '@/app/components/DynamicFormattedWordsProvider'
-import { PaperCutProvider } from '@/app/contexts/PaperCutContext'
+import ClientLayout from '@/app/clientlayout'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -21,17 +19,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
-        <FileSystemProvider>
-          <PaperCutProvider>
-            <EditorContentProvider>
-              <DynamicFormattedWordsProvider>
-                {children}
-              </DynamicFormattedWordsProvider>
-            </EditorContentProvider>
-          </PaperCutProvider>
-        </FileSystemProvider>
-      </body>
+      <ClientLayout className={inter.className}>
+        {children}
+      </ClientLayout>
     </html>
   )
 }

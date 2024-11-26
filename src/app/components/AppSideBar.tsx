@@ -297,7 +297,30 @@ export function AppSidebar() {
       await addFiles(files, null);
     }
   }
-
+    const handleDragOver = (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      // Optionally add some visual feedback
+      e.currentTarget.classList.add('drag-over');
+    };
+    
+    const handleDragLeave = (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      e.currentTarget.classList.remove('drag-over');
+    };
+    
+    const handleDrop = async (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      e.currentTarget.classList.remove('drag-over');
+      
+      const files = e.dataTransfer.files;
+      if (files && files.length > 0) {
+        await addFiles(files, null);
+      }
+    };
+  
   return (
     <div className="p-4 space-y-4">
       <Button 
@@ -314,6 +337,12 @@ export function AppSidebar() {
         className="hidden"
         onChange={handleFileUpload}
       />
+      <div 
+        className="p-4 space-y-4"
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      ></div>
       <FileSystemTree parentId={null} />
     </div>
   );

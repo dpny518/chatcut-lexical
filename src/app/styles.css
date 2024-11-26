@@ -880,7 +880,10 @@ i.justify-align {
   height: 100%;
 }
 
-
+.drag-over {
+  background-color: rgba(0, 0, 0, 0.05);
+  border: 2px dashed #ccc;
+}
 
 .papercut-speaker {
   font-weight: bold;
