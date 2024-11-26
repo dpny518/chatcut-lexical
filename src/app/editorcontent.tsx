@@ -1,3 +1,4 @@
+//src/app/editorcontent.tsx
 import { useEffect, useCallback } from "react";
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { $getRoot, $createTextNode, $getSelection, $isRangeSelection } from 'lexical';

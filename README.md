@@ -67,3 +67,68 @@ Each format has its own processor to convert the data into the custom Lexical no
 ## Read-Only Mode
 
 The editor implements a custom read-only mode that allows for word-level selection and movement while preventing character-level edits.
+
+## Main Editor (EditorContent)
+- Location: Middle panel
+- Purpose: Display and interact with transcript files
+- Source: Files selected from file system
+- State Management: 
+  - useFileSystem() for file data
+  - useEditorContent() for selection state
+- Node Types:
+  - WordNode
+  - SegmentNode
+  - SpeakerNode
+- Features:
+  - Read-only display of transcripts
+  - Drag and drop support
+  - Copy functionality
+  - Multi-file display
+
+## PaperCut Editor (LexicalEditor)
+- Location: Right panel tabs
+- Purpose: Edit and create PaperCuts
+- Source: User input and dragged content
+- State Management:
+  - useEditors() for editor instances
+  - usePaperCut() for tab state
+- Node Types:
+  - PaperCutWordNode
+  - PaperCutSpeakerNode
+  - PaperCutSegmentNode
+- Features:
+  - Editable content
+  - Multiple independent instances (one per tab)
+  - Custom toolbar
+  - Auto-focus
+  - Copy/paste support
+  - Word hovering
+  - Edit restrictions
+
+  EditorContentContext.tsx (Provider)
+├── Maintains State:
+│   ├── selectedFileIds[]
+│   ├── lastSelectedFileId
+│   ├── paperCutSelectedIds[]
+│   └── paperCutLastSelectedId
+│
+└── Provides Methods:
+    ├── setSelectedFileIds()
+    ├── setLastSelectedFileId()
+    ├── setPaperCutSelectedIds()
+    └── setPaperCutLastSelectedId()
+
+                ↓ (provides state via context)
+
+editorcontent.tsx (Consumer)
+├── Uses State:
+│   └── { selectedFileIds } = useEditorContent()
+│
+├── Renders Content:
+│   ├── Processes selected files
+│   ├── Creates editor nodes
+│   └── Handles drag & drop
+│
+└── Updates Editor:
+    ├── Clears/updates content
+    └── Manages copy commands

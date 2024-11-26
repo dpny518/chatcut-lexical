@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext, useState, useCallback } from 'react'
 
-export type FileType = 'folder' | 'file' | 'image'
+export type FileType = 'folder' | 'file' | 'image' | 'papercut'
 
 export interface FileSystemItem {
   id: string
@@ -19,7 +19,7 @@ interface FileSystemContextType {
   selectedItems: string[]
   addFile: (file: File, parentId: string | null) => Promise<void>
   addFiles: (files: FileList, parentId: string | null) => Promise<void>
-  createFolder: (name: string, parentId: string | null) => void
+  createFolder: (name: string, parentId: string | null, type?: FileType) => void
   moveItem: (itemId: string, newParentId: string | null, beforeId: string | null) => void
   deleteItem: (itemId: string) => void
   renameItem: (itemId: string, newName: string) => void
@@ -36,12 +36,16 @@ export const FileSystemProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [errorState, setErrorState] = useState<string | null>(null)
   const [lastSelectedId, setLastSelectedId] = useState<string | null>(null);
   // Helper functions remain the same
-  const getDirectoryItems = (parentId: string | null) => {
-    return Object.values(files)
-      .filter(file => file.parentId === parentId)
-      .sort((a, b) => a.order - b.order)
-  }
-
+const getDirectoryItems = (parentId: string | null, type?: FileType) => {
+  return Object.values(files)
+    .filter(file => {
+      if (type) {
+        return file.parentId === parentId && file.type === type;
+      }
+      return file.parentId === parentId;
+    })
+    .sort((a, b) => a.order - b.order)
+}
   const generateOrder = (beforeItem: FileSystemItem | null, afterItem: FileSystemItem | null) => {
     const beforeOrder = beforeItem?.order ?? 0
     const afterOrder = afterItem?.order ?? beforeOrder + 1000
@@ -204,26 +208,27 @@ export const FileSystemProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
   }, []);
   
-  const createFolder = useCallback((name: string, parentId: string | null) => {
-    const id = Math.random().toString(36).substr(2, 9)
-    setFiles(prev => {
-      const directoryItems = getDirectoryItems(parentId)
-      const lastItem = directoryItems[directoryItems.length - 1]
-      const order = lastItem ? lastItem.order + 1000 : 1000
-  
-      return {
-        ...prev,
-        [id]: { 
-          id, 
-          name, 
-          type: 'folder', 
-          parentId, 
-          order,
-          content: JSON.stringify({}) // Empty object for folders
-        }
+
+const createFolder = useCallback((name: string, parentId: string | null, type: FileType = 'folder') => {
+  const id = Math.random().toString(36).substr(2, 9)
+  setFiles(prev => {
+    const directoryItems = getDirectoryItems(parentId)
+    const lastItem = directoryItems[directoryItems.length - 1]
+    const order = lastItem ? lastItem.order + 1000 : 1000
+
+    return {
+      ...prev,
+      [id]: { 
+        id, 
+        name, 
+        type, // Use the provided type parameter
+        parentId, 
+        order,
+        content: JSON.stringify({}) // Empty object for both folders and papercuts
       }
-    })
-  }, [])
+    }
+  })
+}, [])
 
   const moveItem = useCallback((itemId: string, newParentId: string | null, beforeId: string | null) => {
     setFiles(prev => {
@@ -319,27 +324,39 @@ export const FileSystemProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     printStructure(null)
   }, [files])
 
+ // Add methods for papercut-specific operations if needed
+ const createPaperCut = useCallback((name: string, parentId: string | null) => {
+  return createFolder(name, parentId, 'papercut');
+}, [createFolder]);
+
+const getPaperCuts = useCallback(() => {
+  return Object.values(files).filter(file => file.type === 'papercut');
+}, [files]);
 
   
-  const contextValue: FileSystemContextType = {
-    files,
-    selectedItems,
-    addFile,
-    addFiles,
-    createFolder,
-    moveItem,
-    deleteItem,
-    renameItem,
-    toggleItemSelection,
-    updateFileContent,
-    logStructure
-  }
+const contextValue: FileSystemContextType = {
+  files,
+  selectedItems,
+  addFile,
+  addFiles,
+  createFolder, // This now accepts a type parameter
+  moveItem,
+  deleteItem,
+  renameItem,
+  toggleItemSelection,
+  updateFileContent,
+  logStructure,
+}
 
-  return (
-    <FileSystemContext.Provider value={contextValue}>
-      {children}
-    </FileSystemContext.Provider>
-  )
+return (
+  <FileSystemContext.Provider value={contextValue}>
+    {children}
+  </FileSystemContext.Provider>
+)
+}
+// Helper function to determine if an item is a papercut
+export const isPaperCut = (item: FileSystemItem): boolean => {
+  return item.type === 'papercut';
 }
 
 export const useFileSystem = () => {

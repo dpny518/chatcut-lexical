@@ -167,6 +167,6 @@ export function $createPaperCutWordNode(
   return new PaperCutWordNode(text, startTime, endTime, segmentId, speaker, fileId, wordIndex);
 }
 
-export function $isPaperCutWordNode(node: any): node is PaperCutWordNode {
+export function $isPaperCutWordNode(node: LexicalNode | null | undefined): node is PaperCutWordNode {
   return node instanceof PaperCutWordNode;
 }

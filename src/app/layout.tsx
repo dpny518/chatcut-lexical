@@ -18,11 +18,8 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" data-gr-ext-installed="ignore" data-new-gr-c-s-check-loaded="ignore">
+    <html lang="en">
       <head>
-        <meta name="grammarly-disable" content="true" />
-        <meta name="grammar-checker-disable" content="true" />
-        <meta name="spellcheck-disable" content="true" />
       </head>
       <ClientLayout className={inter.className}>
         {children}

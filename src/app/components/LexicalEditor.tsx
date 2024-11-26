@@ -8,6 +8,7 @@ import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin';
 import LexicalErrorBoundary from '@lexical/react/LexicalErrorBoundary';
 import { EditorState, LexicalEditor as LexicalEditorType } from 'lexical';
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { PaperCutWordNode } from '@/app/nodes/PaperCutWordNode';
 import { PaperCutSpeakerNode } from '@/app/nodes/PaperCutSpeakerNode';
 import { PaperCutSegmentNode } from '@/app/nodes/PaperCutSegmentNode';
@@ -23,20 +24,34 @@ interface LexicalEditorProps {
   tabId: string;
 }
 
+function AutoFocus() {
+  const [editor] = useLexicalComposerContext();
+  
+  useEffect(() => {
+    // Focus the editor on mount
+    editor.focus();
+  }, [editor]);
+
+  return null;
+}
+
 function LexicalEditorComponent({ initialState, onChange, tabId }: LexicalEditorProps) {
   const { registerPaperCutEditor, unregisterPaperCutEditor } = useEditors();
 
   const handleLexicalEditorRef = useCallback(
     (editor: LexicalEditorType | null) => {
+      console.log(`handleLexicalEditorRef called for tab: ${tabId}, editor: ${editor ? 'exists' : 'null'}`);
       if (editor !== null) {
+        console.log(`LexicalEditor: Registering editor for tab: ${tabId}`);
         registerPaperCutEditor(tabId, editor);
       }
     },
     [registerPaperCutEditor, tabId]
   );
-
+  
   useEffect(() => {
     return () => {
+      console.log(`Unregistering editor for tab: ${tabId}`);
       unregisterPaperCutEditor(tabId);
     };
   }, [unregisterPaperCutEditor, tabId]);
@@ -46,7 +61,7 @@ function LexicalEditorComponent({ initialState, onChange, tabId }: LexicalEditor
   }, [onChange]);
 
   const editorConfig = useMemo(() => ({
-    namespace: `PaperCutEditor-${tabId}`, // Make namespace unique per editor
+    namespace: `PaperCutEditor-${tabId}`,
     onError: (error: Error) => console.error(error),
     editorState: initialState,
     editorRef: handleLexicalEditorRef,
@@ -60,6 +75,7 @@ function LexicalEditorComponent({ initialState, onChange, tabId }: LexicalEditor
   return (
     <LexicalComposer initialConfig={editorConfig}>
       <div className="editor-container relative">
+        <AutoFocus />
         <PaperCutToolbarPlugin />
         <RichTextPlugin
           contentEditable={

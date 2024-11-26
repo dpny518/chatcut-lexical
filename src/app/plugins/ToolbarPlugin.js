@@ -33,6 +33,7 @@ function Divider() {
 
 export default function ToolbarPlugin() {
   const [editor] = useLexicalComposerContext();
+  const { getActivePaperCutEditor } = useEditors();
   const toolbarRef = useRef(null);
 
   // Basic editor states
@@ -56,23 +57,39 @@ export default function ToolbarPlugin() {
   const updateToolbar = useCallback(() => {
     const selection = $getSelection();
     if ($isRangeSelection(selection)) {
-      // Check for valid selection of PaperCutWordNodes
       const nodes = selection.getNodes();
       const hasWordNodes = nodes.some($isPaperCutWordNode);
-      setHasValidSelection(hasWordNodes);
-
+      const activePaperCutEditor = getActivePaperCutEditor();
+      console.log('Updating toolbar:');
+      console.log('- Has word nodes:', hasWordNodes);
+      console.log('- Active PaperCut editor:', activePaperCutEditor);
+      console.log('- Selection:', selection);
+      console.log('- Nodes:', nodes.map(node => node.getType()));
+      setHasValidSelection(hasWordNodes && activePaperCutEditor !== null);
+  
       // Update text format states
       setIsBold(selection.hasFormat("bold"));
       setIsItalic(selection.hasFormat("italic"));
       setIsUnderline(selection.hasFormat("underline"));
       setIsStrikethrough(selection.hasFormat("strikethrough"));
-
+  
       // Update highlight states
       const bgColor = $getSelectionStyleValueForProperty(selection, 'background-color', null);
       setIsGreenHighlight(bgColor === HIGHLIGHT_GREEN);
       setIsRedHighlight(bgColor === HIGHLIGHT_RED);
+    } else {
+      console.log('No range selection');
+      setHasValidSelection(false);
+      
+      // Reset all states when there's no selection
+      setIsBold(false);
+      setIsItalic(false);
+      setIsUnderline(false);
+      setIsStrikethrough(false);
+      setIsGreenHighlight(false);
+      setIsRedHighlight(false);
     }
-  }, [editor]);
+  }, [editor, getActivePaperCutEditor]);
 
   const applyStyleText = useCallback(
     (styles, skipHistoryStack) => {
@@ -153,7 +170,7 @@ export default function ToolbarPlugin() {
         () => {
           const selection = $getSelection();
           if (!$isRangeSelection(selection)) return false;
-
+      
           const nodes = selection.getNodes();
           const selectedContent = nodes
             .filter($isPaperCutWordNode)
@@ -166,10 +183,9 @@ export default function ToolbarPlugin() {
               fileId: node.getFileId(),
               wordIndex: node.getWordIndex()
             }));
-
+      
           if (selectedContent.length === 0) return false;
-
-          const { getActivePaperCutEditor } = useEditors();
+      
           const papercutEditor = getActivePaperCutEditor();
           
           if (papercutEditor) {
@@ -281,10 +297,13 @@ export default function ToolbarPlugin() {
       </button>
       <Divider />
       <button
-        onClick={() => editor.dispatchCommand(ADD_TO_PAPERCUT_COMMAND)}
-        className={`toolbar-item spaced ${hasValidSelection ? 'active' : ''}`}
-        disabled={!hasValidSelection}
-        aria-label="Add to PaperCut"
+       onClick={() => {
+        console.log('Add to PaperCut button clicked, hasValidSelection:', hasValidSelection);
+        editor.dispatchCommand(ADD_TO_PAPERCUT_COMMAND);
+      }}
+      className={`toolbar-item spaced ${hasValidSelection ? 'active' : ''}`}
+      disabled={!hasValidSelection}
+      aria-label="Add to PaperCut"
       >
         <i className="format add-to-papercut">
           <svg 

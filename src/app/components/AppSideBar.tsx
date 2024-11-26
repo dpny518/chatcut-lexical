@@ -22,7 +22,17 @@ interface DropIndicator {
 
 const FileSystemTree: React.FC<{ parentId: string | null }> = ({ parentId }) => {
   const { files, moveItem, deleteItem, renameItem, createFolder } = useFileSystem();
-  const { selectedFileIds, setSelectedFileIds, lastSelectedId, setLastSelectedId } = useEditorContent();
+  const { 
+    selectedFileIds, 
+    setSelectedFileIds, 
+    lastSelectedFileId, 
+    setLastSelectedFileId,
+    paperCutSelectedIds,
+    setPaperCutSelectedIds,
+    paperCutLastSelectedId,
+    setPaperCutLastSelectedId
+  } = useEditorContent();
+  
   const [openFolders, setOpenFolders] = useState<Set<string>>(new Set());
   const [dropIndicator, setDropIndicator] = useState<DropIndicator | null>(null);
   const [newFolderName, setNewFolderName] = useState('');
@@ -47,82 +57,142 @@ const FileSystemTree: React.FC<{ parentId: string | null }> = ({ parentId }) => 
     e.dataTransfer.effectAllowed = 'move'
   }
 
-  
   const sortedItems = Object.values(files)
-  .filter(file => file.parentId === parentId)
-  .sort((a, b) => a.order - b.order);
+    .filter(file => file.parentId === parentId)
+    .sort((a, b) => a.order - b.order);
   
-const getAllContents = (folderId: string): string[] => {
-  const contents: string[] = [];
-  const queue = [folderId];
-  while (queue.length > 0) {
-    const currentId = queue.shift()!;
-    const item = files[currentId];
-    if (item.type === 'file') {
-      contents.push(currentId);
-    } else if (item.type === 'folder') {
-      const childItems = Object.values(files)
-        .filter(f => f.parentId === currentId)
-        .sort((a, b) => a.order - b.order);
-      childItems.forEach(child => queue.push(child.id));
+  const getAllContents = (folderId: string): string[] => {
+    const contents: string[] = [];
+    const queue = [folderId];
+    while (queue.length > 0) {
+      const currentId = queue.shift()!;
+      const item = files[currentId];
+      if (item.type === 'file') {
+        contents.push(currentId);
+      } else if (item.type === 'folder') {
+        const childItems = Object.values(files)
+          .filter(f => f.parentId === currentId)
+          .sort((a, b) => a.order - b.order);
+        childItems.forEach(child => queue.push(child.id));
+      }
     }
-  }
-  return contents;
-};
-const isAllContentsSelected = (folderId: string): boolean => {
-  const contents = getAllContents(folderId);
-  return contents.every(id => selectedFileIds.includes(id));
-};
+    return contents;
+  };
 
-const handleItemClick = useCallback((itemId: string, event: React.MouseEvent) => {
-  console.log("FileSystemTree: Item clicked", itemId);
-  setLastSelectedId(itemId);
-  setSelectedFileIds((prevSelectedIds: string[]) => {
+  const isAllContentsSelected = (folderId: string): boolean => {
+    const contents = getAllContents(folderId);
+    return contents.every(id => selectedFileIds.includes(id));
+  };
+
+  const handleItemClick = useCallback((itemId: string, event: React.MouseEvent) => {
+    console.log("AppSidebar: Item clicked", itemId);
     const clickedItem = files[itemId];
     
-    // Handle Ctrl/Cmd key (multi-select)
-    if (event.ctrlKey || event.metaKey) {
-      if (prevSelectedIds.includes(itemId)) {
-        // Unselect the item and its contents if it's a folder
-        if (clickedItem.type === 'folder') {
-          const folderContents = getAllContents(itemId);
-          return prevSelectedIds.filter(id => !folderContents.includes(id));
-        } else {
-          return prevSelectedIds.filter(id => id !== itemId);
+    // Handle file selection
+    if (!event.altKey) {
+      setLastSelectedFileId(itemId);
+      setSelectedFileIds((prevSelectedIds: string[]) => {
+        // Handle Ctrl/Cmd key (multi-select)
+        if (event.ctrlKey || event.metaKey) {
+          if (prevSelectedIds.includes(itemId)) {
+            // Unselect the item and its contents if it's a folder
+            if (clickedItem.type === 'folder') {
+              const folderContents = getAllContents(itemId);
+              return prevSelectedIds.filter(id => !folderContents.includes(id));
+            } else {
+              return prevSelectedIds.filter(id => id !== itemId);
+            }
+          } else {
+            // Select the item and its contents if it's a folder
+            if (clickedItem.type === 'folder') {
+              const folderContents = getAllContents(itemId);
+              return Array.from(new Set([...prevSelectedIds, ...folderContents]));
+            } else {
+              return [...prevSelectedIds, itemId];
+            }
+          }
         }
-      } else {
-        // Select the item and its contents if it's a folder
-        if (clickedItem.type === 'folder') {
-          const folderContents = getAllContents(itemId);
-          return Array.from(new Set([...prevSelectedIds, ...folderContents]));
-        } else {
-          return [...prevSelectedIds, itemId];
+        
+        // Handle Shift key (range select)
+        if (event.shiftKey && lastSelectedFileId) {
+          const start = sortedItems.findIndex(item => item.id === lastSelectedFileId);
+          const end = sortedItems.findIndex(item => item.id === itemId);
+          const range = sortedItems.slice(Math.min(start, end), Math.max(start, end) + 1);
+          return Array.from(new Set(range.flatMap(item => 
+            item.type === 'folder' ? getAllContents(item.id) : item.id
+          )));
         }
-      }
+        
+        // Normal click (single select or unselect)
+        if (prevSelectedIds.length === 1 && prevSelectedIds[0] === itemId) {
+          // If the clicked item is the only selected item, unselect it
+          return [];
+        } else {
+          // Otherwise, select only this item (or its contents if it's a folder)
+          if (clickedItem.type === 'folder') {
+            return getAllContents(itemId);
+          } else {
+            return [itemId];
+          }
+        }
+      });
     }
-    
-    // Handle Shift key (range select)
-    if (event.shiftKey && lastSelectedId) {
-      const start = sortedItems.findIndex(item => item.id === lastSelectedId);
-      const end = sortedItems.findIndex(item => item.id === itemId);
-      const range = sortedItems.slice(Math.min(start, end), Math.max(start, end) + 1);
-      return Array.from(new Set(range.flatMap(item => item.type === 'folder' ? getAllContents(item.id) : item.id)));
+
+    // Handle PaperCut selection (Alt/Option key)
+    if (event.altKey) {
+      setPaperCutLastSelectedId(itemId);
+      setPaperCutSelectedIds((prevSelectedIds: string[]) => {
+        // Handle Ctrl/Cmd + Alt key (multi-select)
+        if (event.ctrlKey || event.metaKey) {
+          if (prevSelectedIds.includes(itemId)) {
+            if (clickedItem.type === 'folder') {
+              const folderContents = getAllContents(itemId);
+              return prevSelectedIds.filter(id => !folderContents.includes(id));
+            } else {
+              return prevSelectedIds.filter(id => id !== itemId);
+            }
+          } else {
+            if (clickedItem.type === 'folder') {
+              const folderContents = getAllContents(itemId);
+              return Array.from(new Set([...prevSelectedIds, ...folderContents]));
+            } else {
+              return [...prevSelectedIds, itemId];
+            }
+          }
+        }
+        
+        // Handle Shift + Alt key (range select)
+        if (event.shiftKey && paperCutLastSelectedId) {
+          const start = sortedItems.findIndex(item => item.id === paperCutLastSelectedId);
+          const end = sortedItems.findIndex(item => item.id === itemId);
+          const range = sortedItems.slice(Math.min(start, end), Math.max(start, end) + 1);
+          return Array.from(new Set(range.flatMap(item => 
+            item.type === 'folder' ? getAllContents(item.id) : item.id
+          )));
+        }
+
+        // Alt key only (single select or unselect)
+        if (prevSelectedIds.length === 1 && prevSelectedIds[0] === itemId) {
+          return [];
+        } else {
+          if (clickedItem.type === 'folder') {
+            return getAllContents(itemId);
+          } else {
+            return [itemId];
+          }
+        }
+      });
     }
-    
-    // Normal click (single select or unselect)
-    if (prevSelectedIds.length === 1 && prevSelectedIds[0] === itemId) {
-      // If the clicked item is the only selected item, unselect it
-      return [];
-    } else {
-      // Otherwise, select only this item (or its contents if it's a folder)
-      if (clickedItem.type === 'folder') {
-        return getAllContents(itemId);
-      } else {
-        return [itemId];
-      }
-    }
-  });
-}, [files, setSelectedFileIds, setLastSelectedId, lastSelectedId, sortedItems]);
+  }, [
+    files,
+    setSelectedFileIds,
+    setLastSelectedFileId,
+    lastSelectedFileId,
+    setPaperCutSelectedIds,
+    setPaperCutLastSelectedId,
+    paperCutLastSelectedId,
+    sortedItems
+  ]);
 
   const handleDragOver = (e: DragEvent<HTMLDivElement>, targetId: string, type: FileType) => {
     e.preventDefault()
@@ -202,21 +272,24 @@ const handleItemClick = useCallback((itemId: string, event: React.MouseEvent) =>
     const isFolder = item.type === 'folder';
     const isSelected = selectedFileIds.includes(item.id);
     const isFullySelected = isFolder && isAllContentsSelected(item.id);
+    const isPaperCutSelected = paperCutSelectedIds.includes(item.id);
   
     return (
       <div
-      key={item.id}
-      className={`flex items-center gap-2 px-3 py-2 rounded-md cursor-pointer transition-colors ${
-        isSelected || isFullySelected ? 'bg-primary/10' : 'hover:bg-muted'
-      } ${
-        isFullySelected ? 'ring-2 ring-primary' : ''
-      }`}
-      draggable
-      onDragStart={(e) => handleDragStart(e, item.id)}
-      onDragOver={(e) => handleDragOver(e, item.id, item.type)}
-      onDragLeave={handleDragLeave}
-      onDrop={(e) => handleDrop(e, item.id)}
-      onClick={(e) => handleItemClick(item.id, e)}
+        key={item.id}
+        className={`flex items-center gap-2 px-3 py-2 rounded-md cursor-pointer transition-colors
+          ${isSelected || isFullySelected ? 'bg-primary/10' : ''}
+          ${isPaperCutSelected ? 'bg-secondary/10' : ''}
+          ${isFullySelected ? 'ring-2 ring-primary' : ''}
+          ${isPaperCutSelected && isSelected ? 'bg-primary/5 bg-secondary/5' : ''}
+          hover:bg-muted
+        `}
+        draggable
+        onDragStart={(e) => handleDragStart(e, item.id)}
+        onDragOver={(e) => handleDragOver(e, item.id, item.type)}
+        onDragLeave={handleDragLeave}
+        onDrop={(e) => handleDrop(e, item.id)}
+        onClick={(e) => handleItemClick(item.id, e)}
       >
         {isFolder && (
           <span onClick={(e) => toggleFolder(item.id, e)} className="text-muted-foreground">
@@ -235,7 +308,9 @@ const handleItemClick = useCallback((itemId: string, event: React.MouseEvent) =>
             autoFocus
           />
         ) : (
-          <span className={`text-sm truncate flex-grow ${isFullySelected ? 'font-semibold' : ''}`}>{item.name}</span>
+          <span className={`text-sm truncate flex-grow ${isFullySelected ? 'font-semibold' : ''}`}>
+            {item.name}
+          </span>
         )}
         <Button variant="ghost" size="icon" onClick={(e) => handleRename(e, item.id)} className="h-7 w-7">
           <Edit2 className="w-4 h-4" />
@@ -246,8 +321,6 @@ const handleItemClick = useCallback((itemId: string, event: React.MouseEvent) =>
       </div>
     );
   };
-
- 
 
   return (
     <div className="pl-4 space-y-2">
@@ -279,24 +352,35 @@ const handleItemClick = useCallback((itemId: string, event: React.MouseEvent) =>
         <div 
           onClick={() => setIsCreatingFolder(true)}
           className="flex items-center px-2 py-1 rounded-md cursor-pointer text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-200"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          <span className="text-sm">New Folder</span>
-        </div>
-      )}
-    </div>
-  )
-}
-
-export function AppSidebar() {
-  const { addFiles } = useFileSystem();
-
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (files && files.length > 0) {
-      await addFiles(files, null);
-    }
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            <span className="text-sm">New Folder</span>
+          </div>
+        )}
+      </div>
+    )
   }
+  
+  export function AppSidebar() {
+    const { 
+      selectedFileIds, 
+      setSelectedFileIds, 
+      lastSelectedFileId, 
+      setLastSelectedFileId,
+      paperCutSelectedIds,
+      setPaperCutSelectedIds,
+      paperCutLastSelectedId,
+      setPaperCutLastSelectedId
+    } = useEditorContent();
+    const { addFiles } = useFileSystem();
+  
+    const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const files = event.target.files;
+      if (files && files.length > 0) {
+        await addFiles(files, null);
+      }
+    }
+  
     return (
       <div className="p-4 space-y-4">
         <Button 
@@ -317,3 +401,5 @@ export function AppSidebar() {
       </div>
     );
   }
+  
+  export default AppSidebar;

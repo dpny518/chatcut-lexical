@@ -35,15 +35,15 @@ export default function ClientLayout({ children, className }: ClientLayoutProps)
     <body className={`${className} overflow-hidden`}>
       <FileSystemProvider>
         <EditorContentProvider>
-          <PaperCutProvider>
-            <EditorProvider>
+          <EditorProvider>
+            <PaperCutProvider>
               <DynamicFormattedWordsProvider>
                 <DragDropWrapper>
                   {children}
                 </DragDropWrapper>
               </DynamicFormattedWordsProvider>
-            </EditorProvider>
-          </PaperCutProvider>
+            </PaperCutProvider>
+          </EditorProvider>
         </EditorContentProvider>
       </FileSystemProvider>
 

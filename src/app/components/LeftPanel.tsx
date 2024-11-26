@@ -1,17 +1,16 @@
-// src/app/components/LeftPanel.tsx
 "use client";
 
 import React from "react";
-import { AppSidebar } from "@/app/components/AppSideBar";
-import { PaperCutSidebar } from "@/app/components/PaperCutSidebar";
-import { SidebarSeparator } from "@/app/components/Sidebar/SidebarSeparator";
-import Chatbot from "@/app/components/Chatbot/Chatbot";
+import { FileSidebar } from "@/app/components/FileSideBar"
+import { PaperCutSidebar } from "./PaperCutSidebar";
+import { SidebarSeparator } from "./Sidebar/SidebarSeparator";
+import Chatbot from "./Chatbot/Chatbot";
 
 export default function LeftPanel() {
   return (
     <aside className="w-64 h-full bg-muted text-foreground border-r border-border flex flex-col">
       <div className="flex-grow overflow-auto">
-        <AppSidebar />
+        <FileSidebar />
         <SidebarSeparator />
         <PaperCutSidebar />
       </div>

@@ -2,7 +2,7 @@
 'use client'
 import React, { createContext, useContext, useState, useCallback, useRef } from 'react'
 import { useEditorContent } from '@/app/contexts/EditorContentContext'
-
+import { useEditors } from '@/app/contexts/EditorContext'
 export type PaperCutType = 'file' | 'folder';
 
 export interface PaperCutTab {
@@ -37,9 +37,8 @@ const PaperCutContext = createContext<PaperCutContextType | undefined>(undefined
 // Counter for generating unique IDs
 let nextId = 1;
 
-export const PaperCutProvider: React.FC<{ 
-  children: React.ReactNode 
-}> = ({ children }) => {
+export const PaperCutProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { setActiveEditor } = useEditors(); // Add this line to get the function from EditorContext
   const [tabs, setTabs] = useState<{ [id: string]: PaperCutTab }>({});
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
   const initialRenderRef = useRef(true);
@@ -133,13 +132,15 @@ export const PaperCutProvider: React.FC<{
   }, []);
 
   const setActiveTab = useCallback((id: string) => {
+    console.log('PaperCutContext: Setting active tab:', id);
     setTabs(prev => ({
       ...prev,
       [id]: { ...prev[id], active: true }
     }));
     setActiveTabId(id);
-  }, []);
-
+    setActiveEditor(id);  // Make sure this line is present
+  }, [setActiveEditor]);
+  
   const moveTab = useCallback((id: string, newParentId: string | null, beforeId: string | null = null) => {
     setTabs(prev => {
       const movedTab = prev[id];

@@ -1,5 +1,5 @@
 // src/app/components/PaperCutPanel.tsx
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { X } from "lucide-react";
@@ -21,6 +21,7 @@ import { usePaperCut } from '@/app/contexts/PaperCutContext';
 interface LexicalEditorProps {
   initialState: string | null;
   onChange: (newState: string) => void;
+  tabId: string;
 }
 
 export function PaperCutPanel() {
@@ -34,6 +35,15 @@ export function PaperCutPanel() {
     getTabs,
     closeTab
   } = usePaperCut();
+
+  // Add this state to force re-render
+  const [editorKey, setEditorKey] = useState(0);
+
+  // Modify setActiveTab to force re-render
+  const handleSetActiveTab = useCallback((id: string) => {
+    setActiveTab(id);
+    setEditorKey(prev => prev + 1);
+  }, [setActiveTab]);
 
   // Only get tabs that are currently active/open
   const openTabs = getTabs().filter(tab => tab.type === 'file' && tab.active);
@@ -53,7 +63,7 @@ export function PaperCutPanel() {
   };
 
   return (
-    <Tabs value={activeTabId} onValueChange={setActiveTab} className="w-full">
+    <Tabs value={activeTabId} onValueChange={handleSetActiveTab} className="w-full">
       <div className="flex justify-between items-center mb-4">
         <TabsList className="w-full justify-start">
           {openTabs.map(tab => (
@@ -88,8 +98,10 @@ export function PaperCutPanel() {
             </CardHeader>
             <CardContent>
               <LexicalEditor
+                key={`${tab.id}-${editorKey}`}
                 initialState={tab.editorState}
                 onChange={(newState) => updateTabContent(tab.id, newState)}
+                tabId={tab.id}
               />
             </CardContent>
           </Card>
