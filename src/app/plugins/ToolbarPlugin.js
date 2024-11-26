@@ -26,9 +26,15 @@ import { useEditors } from '@/app/contexts/EditorContext';
 
 const LowPriority = 1;
 const ADD_TO_PAPERCUT_COMMAND = createCommand('ADD_TO_PAPERCUT_COMMAND');
+const INSERT_TO_PAPERCUT_COMMAND = createCommand('INSERT_TO_PAPERCUT_COMMAND');
 
-function Divider() {
-  return <div className="divider" />;
+
+function Divider({ className = "" }) {
+  return <div className={`h-6 w-[1px] bg-border ${className}`} />;
+}
+
+function isWordNode(node) {
+  return node.getType() === 'word' || $isPaperCutWordNode(node);
 }
 
 export default function ToolbarPlugin() {
@@ -58,13 +64,15 @@ export default function ToolbarPlugin() {
     const selection = $getSelection();
     if ($isRangeSelection(selection)) {
       const nodes = selection.getNodes();
-      const hasWordNodes = nodes.some($isPaperCutWordNode);
+      const hasWordNodes = nodes.some(isWordNode);
       const activePaperCutEditor = getActivePaperCutEditor();
+      
       console.log('Updating toolbar:');
       console.log('- Has word nodes:', hasWordNodes);
       console.log('- Active PaperCut editor:', activePaperCutEditor);
       console.log('- Selection:', selection);
-      console.log('- Nodes:', nodes.map(node => node.getType()));
+      console.log('- Node types:', nodes.map(n => n.getType()));
+      
       setHasValidSelection(hasWordNodes && activePaperCutEditor !== null);
   
       // Update text format states
@@ -89,7 +97,7 @@ export default function ToolbarPlugin() {
       setIsGreenHighlight(false);
       setIsRedHighlight(false);
     }
-  }, [editor, getActivePaperCutEditor]);
+  }, [getActivePaperCutEditor]);
 
   const applyStyleText = useCallback(
     (styles, skipHistoryStack) => {
@@ -105,6 +113,139 @@ export default function ToolbarPlugin() {
     },
     [editor]
   );
+
+  const handleAddToPaperCut = useCallback(() => {
+    const selection = $getSelection();
+    if (!$isRangeSelection(selection)) return false;
+
+    const nodes = selection.getNodes();
+    const selectedContent = nodes
+      .filter(isWordNode)
+      .map(node => ({
+        text: node.getTextContent(),
+        startTime: node.getStartTime(),
+        endTime: node.getEndTime(),
+        segmentId: node.getSegmentId(),
+        speaker: node.getSpeaker(),
+        fileId: node.getFileId(),
+        wordIndex: node.getWordIndex()
+      }));
+
+    if (selectedContent.length === 0) return false;
+
+    const papercutEditor = getActivePaperCutEditor();
+    
+    if (papercutEditor) {
+      papercutEditor.update(() => {
+        const root = $getRoot();
+        let currentSpeaker = '';
+        let paragraphNode = $createParagraphNode();
+
+        selectedContent.forEach((word) => {
+          if (word.speaker !== currentSpeaker) {
+            currentSpeaker = word.speaker;
+            
+            if (paragraphNode.getTextContent()) {
+              root.append(paragraphNode);
+              paragraphNode = $createParagraphNode();
+            }
+
+            const speakerNameNode = $createTextNode(`${word.speaker}: `);
+            speakerNameNode.toggleFormat('bold');
+            paragraphNode.append(speakerNameNode);
+          }
+
+          const wordNode = $createPaperCutWordNode(
+            word.text,
+            word.startTime,
+            word.endTime,
+            word.segmentId,
+            word.speaker,
+            word.fileId,
+            word.wordIndex
+          );
+          paragraphNode.append(wordNode);
+          paragraphNode.append($createTextNode(' '));
+        });
+
+        if (paragraphNode.getTextContent()) {
+          root.append(paragraphNode);
+        }
+      });
+    }
+    return true;
+  }, [getActivePaperCutEditor]);
+
+  const handleInsertToPaperCut = useCallback(() => {
+    const selection = $getSelection();
+    if (!$isRangeSelection(selection)) return false;
+
+    const nodes = selection.getNodes();
+    const selectedContent = nodes
+      .filter(isWordNode)
+      .map(node => ({
+        text: node.getTextContent(),
+        startTime: node.getStartTime(),
+        endTime: node.getEndTime(),
+        segmentId: node.getSegmentId(),
+        speaker: node.getSpeaker(),
+        fileId: node.getFileId(),
+        wordIndex: node.getWordIndex()
+      }));
+
+    if (selectedContent.length === 0) return false;
+
+    const papercutEditor = getActivePaperCutEditor();
+    
+    if (papercutEditor) {
+      papercutEditor.update(() => {
+        const selection = $getSelection();
+        if (!selection) {
+          // If no selection, do nothing
+          return;
+        }
+
+        let currentSpeaker = '';
+        let paragraphNode = selection.anchor.getNode();
+        
+        // If we're not in a paragraph, create one
+        if (!paragraphNode.getType() === 'paragraph') {
+          paragraphNode = $createParagraphNode();
+          selection.insertNodes([paragraphNode]);
+        }
+
+        const contentNodes = [];
+        selectedContent.forEach((word) => {
+          if (word.speaker !== currentSpeaker) {
+            currentSpeaker = word.speaker;
+            
+            if (contentNodes.length > 0) {
+              contentNodes.push($createTextNode(' '));
+            }
+
+            const speakerNameNode = $createTextNode(`${word.speaker}: `);
+            speakerNameNode.toggleFormat('bold');
+            contentNodes.push(speakerNameNode);
+          }
+
+          const wordNode = $createPaperCutWordNode(
+            word.text,
+            word.startTime,
+            word.endTime,
+            word.segmentId,
+            word.speaker,
+            word.fileId,
+            word.wordIndex
+          );
+          contentNodes.push(wordNode);
+          contentNodes.push($createTextNode(' '));
+        });
+
+        selection.insertNodes(contentNodes);
+      });
+    }
+    return true;
+  }, [getActivePaperCutEditor]);
   
   useEffect(() => {
     return mergeRegister(
@@ -121,191 +262,136 @@ export default function ToolbarPlugin() {
         },
         LowPriority
       ),
+      editor.registerCommand(CAN_UNDO_COMMAND, setCanUndo, LowPriority),
+      editor.registerCommand(CAN_REDO_COMMAND, setCanRedo, LowPriority),
       editor.registerCommand(
-        CAN_UNDO_COMMAND,
+        FORMAT_TEXT_COMMAND,
         (payload) => {
-          setCanUndo(payload);
-          return false;
-        },
-        LowPriority
-      ),
-      editor.registerCommand(
-        CAN_REDO_COMMAND,
-        (payload) => {
-          setCanRedo(payload);
-          return false;
-        },
-        LowPriority
-      ),
-      editor.registerCommand(
-        FORMAT_GREEN_HIGHLIGHT,
-        () => {
           const selection = $getSelection();
           if ($isRangeSelection(selection)) {
-            const currentBgColor = $getSelectionStyleValueForProperty(selection, 'background-color', null);
-            applyStyleText({
-              'background-color': currentBgColor === HIGHLIGHT_GREEN ? null : HIGHLIGHT_GREEN
-            }, false);
+            // Apply the format
+            selection.formatText(payload);
           }
           return true;
         },
         LowPriority
       ),
-      editor.registerCommand(
-        FORMAT_RED_HIGHLIGHT,
-        () => {
-          const selection = $getSelection();
-          if ($isRangeSelection(selection)) {
-            const currentBgColor = $getSelectionStyleValueForProperty(selection, 'background-color', null);
-            applyStyleText({
-              'background-color': currentBgColor === HIGHLIGHT_RED ? null : HIGHLIGHT_RED
-            }, false);
-          }
-          return true;
-        },
-        LowPriority
-      ),
-      editor.registerCommand(
-        ADD_TO_PAPERCUT_COMMAND,
-        () => {
-          const selection = $getSelection();
-          if (!$isRangeSelection(selection)) return false;
-      
-          const nodes = selection.getNodes();
-          const selectedContent = nodes
-            .filter($isPaperCutWordNode)
-            .map(node => ({
-              text: node.getTextContent(),
-              startTime: node.getStartTime(),
-              endTime: node.getEndTime(),
-              segmentId: node.getSegmentId(),
-              speaker: node.getSpeaker(),
-              fileId: node.getFileId(),
-              wordIndex: node.getWordIndex()
-            }));
-      
-          if (selectedContent.length === 0) return false;
-      
-          const papercutEditor = getActivePaperCutEditor();
-          
-          if (papercutEditor) {
-            papercutEditor.update(() => {
-              const root = $getRoot();
-              let currentSpeaker = '';
-              let paragraphNode = $createParagraphNode();
-
-              selectedContent.forEach((word) => {
-                if (word.speaker !== currentSpeaker) {
-                  currentSpeaker = word.speaker;
-                  
-                  if (paragraphNode.getTextContent()) {
-                    root.append(paragraphNode);
-                    paragraphNode = $createParagraphNode();
-                  }
-
-                  const speakerNameNode = $createTextNode(`${word.speaker}: `);
-                  speakerNameNode.toggleFormat('bold');
-                  paragraphNode.append(speakerNameNode);
-                }
-
-                const wordNode = $createPaperCutWordNode(
-                  word.text,
-                  word.startTime,
-                  word.endTime,
-                  word.segmentId,
-                  word.speaker,
-                  word.fileId,
-                  word.wordIndex
-                );
-                paragraphNode.append(wordNode);
-                paragraphNode.append($createTextNode(' '));
-              });
-
-              if (paragraphNode.getTextContent()) {
-                root.append(paragraphNode);
-              }
-            });
-          }
-          return true;
-        },
-        LowPriority
-      )
+      editor.registerCommand(FORMAT_GREEN_HIGHLIGHT, () => {
+        const selection = $getSelection();
+        if ($isRangeSelection(selection)) {
+          const currentBgColor = $getSelectionStyleValueForProperty(selection, 'background-color', null);
+          applyStyleText({
+            'background-color': currentBgColor === HIGHLIGHT_GREEN ? null : HIGHLIGHT_GREEN
+          }, false);
+        }
+        return true;
+      }, LowPriority),
+      editor.registerCommand(FORMAT_RED_HIGHLIGHT, () => {
+        const selection = $getSelection();
+        if ($isRangeSelection(selection)) {
+          const currentBgColor = $getSelectionStyleValueForProperty(selection, 'background-color', null);
+          applyStyleText({
+            'background-color': currentBgColor === HIGHLIGHT_RED ? null : HIGHLIGHT_RED
+          }, false);
+        }
+        return true;
+      }, LowPriority),
+      editor.registerCommand(ADD_TO_PAPERCUT_COMMAND, handleAddToPaperCut, LowPriority),
+      editor.registerCommand(INSERT_TO_PAPERCUT_COMMAND, handleInsertToPaperCut, LowPriority)
     );
-  }, [editor, updateToolbar, applyStyleText]);
+  }, [editor, updateToolbar, applyStyleText, handleAddToPaperCut, handleInsertToPaperCut]);
 
   return (
-    <div className="toolbar" ref={toolbarRef}>
-      <button
-        disabled={!canUndo}
-        onClick={() => editor.dispatchCommand(UNDO_COMMAND)}
-        className="toolbar-item spaced"
-        aria-label="Undo"
-      >
-        <i className="format undo" />
-      </button>
-      <button
-        disabled={!canRedo}
-        onClick={() => editor.dispatchCommand(REDO_COMMAND)}
-        className="toolbar-item"
-        aria-label="Redo"
-      >
-        <i className="format redo" />
-      </button>
-      <Divider />
-      <button
-        onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, "bold")}
-        className={`toolbar-item spaced ${isBold ? "active" : ""}`}
-        aria-label="Format Bold"
-      >
-        <i className="format bold" />
-      </button>
-      <button
-        onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, "italic")}
-        className={`toolbar-item spaced ${isItalic ? "active" : ""}`}
-        aria-label="Format Italics"
-      >
-        <i className="format italic" />
-      </button>
-      <button
-        onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, "underline")}
-        className={`toolbar-item spaced ${isUnderline ? "active" : ""}`}
-        aria-label="Format Underline"
-      >
-        <i className="format underline" />
-      </button>
-      <button
-        onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, "strikethrough")}
-        className={`toolbar-item spaced ${isStrikethrough ? "active" : ""}`}
-        aria-label="Format Strikethrough"
-      >
-        <i className="format strikethrough" />
-      </button>
-      <Divider />
-      <button
-        onClick={() => editor.dispatchCommand(FORMAT_GREEN_HIGHLIGHT)}
-        className={`toolbar-item spaced ${isGreenHighlight ? "active" : ""}`}
-        aria-label="Highlight Green"
-      >
-        <i className="format highlight-green" style={{ backgroundColor: HIGHLIGHT_GREEN, color: 'black' }}>G</i>
-      </button>
-      <button
-        onClick={() => editor.dispatchCommand(FORMAT_RED_HIGHLIGHT)}
-        className={`toolbar-item spaced ${isRedHighlight ? "active" : ""}`}
-        aria-label="Highlight Red"
-      >
-        <i className="format highlight-red" style={{ backgroundColor: HIGHLIGHT_RED, color: 'black' }}>R</i>
-      </button>
-      <Divider />
-      <button
-       onClick={() => {
-        console.log('Add to PaperCut button clicked, hasValidSelection:', hasValidSelection);
-        editor.dispatchCommand(ADD_TO_PAPERCUT_COMMAND);
-      }}
-      className={`toolbar-item spaced ${hasValidSelection ? 'active' : ''}`}
-      disabled={!hasValidSelection}
-      aria-label="Add to PaperCut"
-      >
-        <i className="format add-to-papercut">
+    <div className="toolbar flex items-center gap-1 p-2 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60" ref={toolbarRef}>
+      <div className="flex items-center gap-1 mr-2">
+        <button
+          disabled={!canUndo}
+          onClick={() => editor.dispatchCommand(UNDO_COMMAND)}
+          className="toolbar-item h-8 w-8 inline-flex items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground disabled:opacity-50"
+          aria-label="Undo"
+        >
+          <i className="format undo" />
+        </button>
+        <button
+          disabled={!canRedo}
+          onClick={() => editor.dispatchCommand(REDO_COMMAND)}
+          className="toolbar-item h-8 w-8 inline-flex items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground disabled:opacity-50"
+          aria-label="Redo"
+        >
+          <i className="format redo" />
+        </button>
+      </div>
+  
+      <Divider className="h-6 w-[1px] bg-border" />
+  
+      <div className="flex items-center gap-1 mx-2">
+        <button
+          onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, "bold")}
+          className={`toolbar-item h-8 w-8 inline-flex items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground 
+            ${isBold ? "bg-accent text-accent-foreground" : ""}`}
+          aria-label="Format Bold"
+        >
+          <i className="format bold" />
+        </button>
+        <button
+          onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, "italic")}
+          className={`toolbar-item h-8 w-8 inline-flex items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground
+            ${isItalic ? "bg-accent text-accent-foreground" : ""}`}
+          aria-label="Format Italics"
+        >
+          <i className="format italic" />
+        </button>
+        <button
+          onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, "underline")}
+          className={`toolbar-item h-8 w-8 inline-flex items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground
+            ${isUnderline ? "bg-accent text-accent-foreground" : ""}`}
+          aria-label="Format Underline"
+        >
+          <i className="format underline" />
+        </button>
+        <button
+          onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, "strikethrough")}
+          className={`toolbar-item h-8 w-8 inline-flex items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground
+            ${isStrikethrough ? "bg-accent text-accent-foreground" : ""}`}
+          aria-label="Format Strikethrough"
+        >
+          <i className="format strikethrough" />
+        </button>
+      </div>
+  
+      <Divider className="h-6 w-[1px] bg-border" />
+  
+      <div className="flex items-center gap-1 mx-2">
+        <button
+          onClick={() => editor.dispatchCommand(FORMAT_GREEN_HIGHLIGHT)}
+          className={`toolbar-item h-8 px-2 inline-flex items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground
+            ${isGreenHighlight ? "bg-accent text-accent-foreground" : ""}`}
+          aria-label="Highlight Green"
+        >
+          <span className="h-4 w-4 flex items-center justify-center text-xs font-medium rounded bg-[#ADFF2F] text-black">G</span>
+        </button>
+        <button
+          onClick={() => editor.dispatchCommand(FORMAT_RED_HIGHLIGHT)}
+          className={`toolbar-item h-8 px-2 inline-flex items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground
+            ${isRedHighlight ? "bg-accent text-accent-foreground" : ""}`}
+          aria-label="Highlight Red"
+        >
+          <span className="h-4 w-4 flex items-center justify-center text-xs font-medium rounded bg-[#FF6347] text-black">R</span>
+        </button>
+      </div>
+  
+      <Divider className="h-6 w-[1px] bg-border" />
+  
+      <div className="flex items-center gap-2 ml-2">
+        <button
+          onClick={() => editor.dispatchCommand(ADD_TO_PAPERCUT_COMMAND)}
+          disabled={!hasValidSelection}
+          className={`toolbar-item h-8 px-3 inline-flex items-center justify-center rounded-md text-sm font-medium
+          ${hasValidSelection 
+              ? "bg-secondary text-secondary-foreground hover:bg-secondary/90" 
+              : "opacity-50 cursor-not-allowed"}`}
+          aria-label="Add to PaperCut"
+        >
           <svg 
             viewBox="0 0 24 24" 
             width="16" 
@@ -313,12 +399,25 @@ export default function ToolbarPlugin() {
             stroke="currentColor" 
             strokeWidth="2" 
             fill="none"
+            className="mr-1"
           >
             <path d="M12 5v14M5 12h14" />
           </svg>
-        </i>
-        <span className="text">+PaperCut</span>
-      </button>
+          Add
+        </button>
+        <button
+          onClick={() => editor.dispatchCommand(INSERT_TO_PAPERCUT_COMMAND)}
+          disabled={!hasValidSelection}
+          className={`toolbar-item h-8 px-3 inline-flex items-center justify-center rounded-md text-sm font-medium
+            ${hasValidSelection 
+              ? "bg-secondary text-secondary-foreground hover:bg-secondary/90" 
+              : "opacity-50 cursor-not-allowed"}`}
+          aria-label="Insert into PaperCut"
+        >
+          <span className="mr-1 text-base leading-none">^</span>
+          Insert
+        </button>
+      </div>
     </div>
   );
 }

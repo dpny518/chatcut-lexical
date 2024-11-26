@@ -53,24 +53,36 @@ export const PaperCutProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const siblingTabs = Object.values(tabs).filter(t => t.parentId === parentId);
     const maxOrder = Math.max(0, ...siblingTabs.map(t => t.order));
     
-    const newTab: PaperCutTab = {
-      id,
-      name: name || `PaperCut ${Object.keys(tabs).length + 1}`,
-      type: 'file',
-      editorState: null,
-      parentId,
-      active: true,
-      createdAt: nextId, // Use counter instead of timestamp
-      order: maxOrder + 1000
-    };
+    // Deactivate all existing tabs first
+    setTabs(prev => {
+      const newTabs = { ...prev };
+      Object.keys(newTabs).forEach(tabId => {
+        if (newTabs[tabId].type === 'file') {
+          newTabs[tabId] = { ...newTabs[tabId], active: false };
+        }
+      });
 
-    setTabs(prev => ({
-      ...prev,
-      [id]: newTab
-    }));
+      // Add the new tab
+      newTabs[id] = {
+        id,
+        name: name || `PaperCut ${Object.keys(prev).length + 1}`,
+        type: 'file',
+        editorState: null,
+        parentId,
+        active: true,
+        createdAt: nextId,
+        order: maxOrder + 1000
+      };
+
+      return newTabs;
+    });
+
+    // Set both activeTabId and activeEditor
     setActiveTabId(id);
+    setActiveEditor(id);
+    
     return id;
-  }, [tabs, generateId]);
+  }, [tabs, generateId, setActiveEditor]);
 
   const createFolder = useCallback((name: string, parentId: string | null = null) => {
     const id = generateId('folder');
@@ -110,12 +122,19 @@ export const PaperCutProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     
     if (activeTabId === id) {
       const activeTabs = Object.values(tabs)
-        .filter(tab => tab.active && tab.id !== id)
+        .filter(tab => tab.type === 'file' && tab.id !== id)
         .sort((a, b) => b.createdAt - a.createdAt);
       
-      setActiveTabId(activeTabs.length > 0 ? activeTabs[0].id : null);
+      if (activeTabs.length > 0) {
+        const nextActiveTab = activeTabs[0];
+        setActiveTabId(nextActiveTab.id);
+        setActiveEditor(nextActiveTab.id);
+      } else {
+        setActiveTabId(null);
+        setActiveEditor('');
+      }
     }
-  }, [activeTabId, tabs]);
+  }, [activeTabId, tabs, setActiveEditor]);
 
   const updateTabName = useCallback((id: string, newName: string) => {
     setTabs(prev => ({
@@ -133,12 +152,28 @@ export const PaperCutProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const setActiveTab = useCallback((id: string) => {
     console.log('PaperCutContext: Setting active tab:', id);
-    setTabs(prev => ({
-      ...prev,
-      [id]: { ...prev[id], active: true }
-    }));
+    setTabs(prev => {
+      // Create new tabs object
+      const newTabs = { ...prev };
+      
+      // Deactivate all tabs first
+      Object.keys(newTabs).forEach(tabId => {
+        if (newTabs[tabId].type === 'file') {
+          newTabs[tabId] = { ...newTabs[tabId], active: false };
+        }
+      });
+      
+      // Activate the selected tab
+      if (newTabs[id]) {
+        newTabs[id] = { ...newTabs[id], active: true };
+      }
+      
+      return newTabs;
+    });
+
+    // Set both activeTabId and activeEditor
     setActiveTabId(id);
-    setActiveEditor(id);  // Make sure this line is present
+    setActiveEditor(id);
   }, [setActiveEditor]);
   
   const moveTab = useCallback((id: string, newParentId: string | null, beforeId: string | null = null) => {
