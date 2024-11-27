@@ -1,4 +1,3 @@
-// src/app/nodes/PaperCutSegmentNode.ts
 import { ElementNode, NodeKey, SerializedElementNode } from 'lexical';
 
 export type SerializedPaperCutSegmentNode = SerializedElementNode & {
@@ -56,6 +55,17 @@ export class PaperCutSegmentNode extends ElementNode {
     return this.__endTime;
   }
 
+  // Add setter methods
+  setStartTime(time: number): void {
+    const writable = this.getWritable();
+    writable.__startTime = time;
+  }
+
+  setEndTime(time: number): void {
+    const writable = this.getWritable();
+    writable.__endTime = time;
+  }
+
   getSegmentId(): string {
     return this.__segmentId;
   }
@@ -77,7 +87,6 @@ export class PaperCutSegmentNode extends ElementNode {
     
     const timestamp = document.createElement('span');
     timestamp.classList.add('segment-timestamp');
-    // Format timestamp [0:01] style
     const time = this.__startTime;
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60);
@@ -92,6 +101,7 @@ export class PaperCutSegmentNode extends ElementNode {
   updateDOM(): boolean {
     return false;
   }
+
   exportJSON(): SerializedPaperCutSegmentNode {
     return {
       ...super.exportJSON(),
@@ -119,7 +129,6 @@ export class PaperCutSegmentNode extends ElementNode {
     return node;
   }
 }
-
 
 export function $createPaperCutSegmentNode(
   startTime: number,

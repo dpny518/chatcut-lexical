@@ -26,7 +26,6 @@ import {
 } from "@lexical/selection";
 import { mergeRegister } from "@lexical/utils";
 import { useEditors } from '@/app/contexts/EditorContext';
-import { reorganizeWords } from '@/app/utils/editorHelpers';
 
 const LowPriority = 1;
 const ADD_TO_PAPERCUT_COMMAND = createCommand('ADD_TO_PAPERCUT_COMMAND');
@@ -163,7 +162,6 @@ export default function ToolbarPlugin() {
     if (papercutEditor) {
       papercutEditor.update(() => {
         appendToEnd(selectedContent);
-        reorganizeWords(papercutEditor);
       });
     }
     return true;
@@ -193,7 +191,7 @@ export default function ToolbarPlugin() {
     if (papercutEditor) {
       papercutEditor.update(() => {
         handleContent(selectedContent);
-        reorganizeWords(papercutEditor);
+
       });
     }
     return true;

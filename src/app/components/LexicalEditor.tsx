@@ -10,15 +10,16 @@ import LexicalErrorBoundary from '@lexical/react/LexicalErrorBoundary';
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { EditorState, LexicalEditor as LexicalEditorType } from 'lexical';
 import { $isPaperCutWordNode, PaperCutWordNode } from '@/app/nodes/PaperCutWordNode';
-import {  $isPaperCutSpeakerNode ,PaperCutSpeakerNode } from '@/app/nodes/PaperCutSpeakerNode';
-import {  $isPaperCutSegmentNode, PaperCutSegmentNode } from '@/app/nodes/PaperCutSegmentNode';
-import { CopyPastePlugin } from '@/app/plugins/CopyPastePlugin';
+import { $isPaperCutSpeakerNode, PaperCutSpeakerNode } from '@/app/nodes/PaperCutSpeakerNode';
+import { $isPaperCutSegmentNode, PaperCutSegmentNode } from '@/app/nodes/PaperCutSegmentNode';
 import { WordHoverPlugin } from '@/app/plugins/WordHoverPlugin';
 import { EditRestrictionPlugin } from '@/app/plugins/EditRestrictionPlugin';
 import PaperCutToolbarPlugin from '@/app/plugins/PaperCutToolbarPlugin';
 import { useEditors } from '@/app/contexts/EditorContext';
 import { ClearEditorPlugin } from '@/app/plugins/ClearEditorPlugin';
-import {TextNode} from 'lexical'
+import PaperCutEditorContent from './PaperCutEditorContent';
+
+import { TextNode } from 'lexical';
 
 interface LexicalEditorProps {
   initialState: string | null;
@@ -42,14 +43,12 @@ function LexicalEditorComponent({ initialState, onChange, tabId }: LexicalEditor
     onChange(JSON.stringify(editorState));
   }, [onChange]);
 
-  // New function to handle editor creation
   const handleEditorCreation = useCallback((editor: LexicalEditorType) => {
     console.log(`LexicalEditor: Editor created for tab ${tabId}`);
     editorRef.current = editor;
     registerPaperCutEditor(tabId, editor);
   }, [registerPaperCutEditor, tabId]);
 
-  // Use cleanup effect
   useEffect(() => {
     return () => {
       console.log(`LexicalEditor: Cleaning up editor for tab ${tabId}`);
@@ -67,10 +66,11 @@ function LexicalEditorComponent({ initialState, onChange, tabId }: LexicalEditor
     nodes: [
       PaperCutWordNode,
       PaperCutSpeakerNode,
-      PaperCutSegmentNode
-    ]
+      PaperCutSegmentNode,
+      TextNode
+    ],
+    editable: true
   }), [initialState, tabId]);
-
 
   return (
     <LexicalComposer initialConfig={editorConfig}>
@@ -80,7 +80,7 @@ function LexicalEditorComponent({ initialState, onChange, tabId }: LexicalEditor
         <RichTextPlugin
           contentEditable={
             <ContentEditable 
-    className="editor-input prose max-w-none min-h-[200px] p-4 outline-none"
+              className="editor-input prose max-w-none min-h-[200px] p-4 outline-none"
               spellCheck={false}
               data-gramm="false"
               data-gramm_editor="false"
@@ -88,22 +88,21 @@ function LexicalEditorComponent({ initialState, onChange, tabId }: LexicalEditor
               suppressContentEditableWarning
             />
           }
-          placeholder={<div className="editor-placeholder">Enter some text...</div>}
+          placeholder={<div className="editor-placeholder">Paste transcript content here...</div>}
           ErrorBoundary={LexicalErrorBoundary}
         />
         <HistoryPlugin />
-        <CopyPastePlugin />
         <OnChangePlugin onChange={handleChange} />
         <WordHoverPlugin />
         <EditRestrictionPlugin />
         <ClearEditorPlugin />
+        <PaperCutEditorContent />
         <RegisterEditorPlugin onEditorCreated={handleEditorCreation} />
       </div>
     </LexicalComposer>
   );
 }
 
-// Plugin to handle editor registration
 function RegisterEditorPlugin({ onEditorCreated }: { onEditorCreated: (editor: LexicalEditorType) => void }) {
   const [editor] = useLexicalComposerContext();
   
