@@ -1,4 +1,3 @@
-// src/app/plugins/WordHoverPlugin.tsx
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { $getNodeByKey } from 'lexical';
 import React, { useEffect, useState, useCallback, useRef } from 'react';
@@ -11,71 +10,90 @@ export function WordHoverPlugin() {
   const [editor] = useLexicalComposerContext();
   const [hoverData, setHoverData] = useState<WordHoverCardProps | null>(null);
   const { files } = useFileSystem();
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const lastWordRef = useRef<string | null>(null);
+  
+  // Refs for managing hover behavior
+  const hoverTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const currentWordRef = useRef<string | null>(null);
+  const isMouseOverCardRef = useRef(false);
+  const cardRef = useRef<HTMLDivElement | null>(null);
+
+  const clearHoverTimer = useCallback(() => {
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
+    }
+  }, []);
+
+  const hideHoverCard = useCallback(() => {
+    if (!isMouseOverCardRef.current) {
+      setHoverData(null);
+      currentWordRef.current = null;
+    }
+  }, []);
+
+  const handleWordData = useCallback((key: string, target: HTMLElement) => {
+    editor.getEditorState().read(() => {
+      const lexicalNode = $getNodeByKey(key);
+      if (lexicalNode instanceof PaperCutWordNode) {
+        const fileId = lexicalNode.getFileId();
+        const fileItem = files[fileId];
+        
+        let fileName = fileItem?.name ?? 'Unknown';
+        let fileInfo = null;
+
+        if (fileItem?.content) {
+          try {
+            fileInfo = JSON.parse(fileItem.content);
+          } catch (error) {
+            console.warn('Error parsing file content:', error);
+          }
+        }
+
+        const newHoverData = {
+          word: lexicalNode.getTextContent(),
+          startTime: lexicalNode.getStartTime(),
+          endTime: lexicalNode.getEndTime(),
+          segmentId: lexicalNode.getSegmentId(),
+          speaker: lexicalNode.getSpeaker(),
+          fileId: fileId,
+          fileName: fileName,
+          wordIndex: lexicalNode.getWordIndex(),
+          rect: target.getBoundingClientRect(),
+        };
+
+        setHoverData(newHoverData);
+      }
+    });
+  }, [editor, files]);
 
   const handleMouseMove = useCallback((event: MouseEvent) => {
     const target = event.target as HTMLElement;
+    
     if (target.classList.contains('papercut-word')) {
       const key = target.getAttribute('data-lexical-node-key');
-      if (key) {
-        // Clear existing timer if the word has changed
-        if (lastWordRef.current !== key) {
-          if (timerRef.current) {
-            clearTimeout(timerRef.current);
-          }
-          lastWordRef.current = key;
+      
+      if (key && key !== currentWordRef.current) {
+        clearHoverTimer();
+        currentWordRef.current = key;
 
-          // Set new timer
-          timerRef.current = setTimeout(() => {
-            editor.getEditorState().read(() => {
-              const lexicalNode = $getNodeByKey(key);
-              if (lexicalNode instanceof PaperCutWordNode) {
-                const fileId = lexicalNode.getFileId();
-                const fileItem = files[fileId];
-                console.log('File item:', fileItem); // Debug log
-
-                let fileName = 'Unknown';
-                let fileInfo = null;
-
-                if (fileItem) {
-                  fileName = fileItem.name; // Use the name directly from the file item
-                  try {
-                    fileInfo = JSON.parse(fileItem.content);
-                    console.log('Parsed file info:', fileInfo); // Debug log
-                  } catch (error) {
-                    console.error('Error parsing file content:', error);
-                  }
-                }
-
-                const hoverData = {
-                  word: lexicalNode.getTextContent(),
-                  startTime: lexicalNode.getStartTime(),
-                  endTime: lexicalNode.getEndTime(),
-                  segmentId: lexicalNode.getSegmentId(),
-                  speaker: lexicalNode.getSpeaker(),
-                  fileId: fileId,
-                  fileName: fileName,
-                  wordIndex: lexicalNode.getWordIndex(),
-                  rect: target.getBoundingClientRect(),
-                };
-
-                console.log('Hover data:', hoverData); // Debug log
-                setHoverData(hoverData);
-              }
-            });
-          }, 1000); // 2000 milliseconds = 2 seconds
-        }
+        hoverTimerRef.current = setTimeout(() => {
+          handleWordData(key, target);
+        }, 500); // Reduced delay to 500ms for better responsiveness
       }
-    } else {
-      // Clear timer and reset hover data when moving away from a word
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-      }
-      setHoverData(null);
-      lastWordRef.current = null;
+    } else if (!isMouseOverCardRef.current) {
+      clearHoverTimer();
+      setTimeout(hideHoverCard, 100); // Small delay to prevent flickering
     }
-  }, [editor, files]);
+  }, [clearHoverTimer, hideHoverCard, handleWordData]);
+
+  const handleCardMouseEnter = useCallback(() => {
+    isMouseOverCardRef.current = true;
+  }, []);
+
+  const handleCardMouseLeave = useCallback(() => {
+    isMouseOverCardRef.current = false;
+    hideHoverCard();
+  }, [hideHoverCard]);
 
   useEffect(() => {
     const editorElement = editor.getRootElement();
@@ -85,15 +103,19 @@ export function WordHoverPlugin() {
 
     return () => {
       editorElement.removeEventListener('mousemove', handleMouseMove);
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-      }
+      clearHoverTimer();
     };
-  }, [editor, handleMouseMove]);
+  }, [editor, handleMouseMove, clearHoverTimer]);
 
   return hoverData
     ? createPortal(
-        <WordHoverCard {...hoverData} />,
+        <div
+          ref={cardRef}
+          onMouseEnter={handleCardMouseEnter}
+          onMouseLeave={handleCardMouseLeave}
+        >
+          <WordHoverCard {...hoverData} />
+        </div>,
         document.body
       )
     : null;
