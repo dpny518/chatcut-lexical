@@ -17,12 +17,16 @@ import {
   createCommand
 } from "lexical";
 import { $isPaperCutWordNode, $createPaperCutWordNode } from '@/app/nodes/PaperCutWordNode';
+import { $isPaperCutSpeakerNode, $createPaperCutSpeakerNode } from '@/app/nodes/PaperCutSpeakerNode';
+import { $isPaperCutSegmentNode, $createPaperCutSegmentNode } from '@/app/nodes/PaperCutSegmentNode';
+
 import {
   $getSelectionStyleValueForProperty,
   $patchStyleText
 } from "@lexical/selection";
 import { mergeRegister } from "@lexical/utils";
 import { useEditors } from '@/app/contexts/EditorContext';
+
 
 const LowPriority = 1;
 const ADD_TO_PAPERCUT_COMMAND = createCommand('ADD_TO_PAPERCUT_COMMAND');
@@ -36,6 +40,27 @@ function Divider({ className = "" }) {
 function isWordNode(node) {
   return node.getType() === 'word' || $isPaperCutWordNode(node);
 }
+
+// Add the helper function before the component
+const groupWordsBySegment = (words) => {
+  const groupsMap = new Map();
+  
+  words.forEach(word => {
+    const key = `${word.segmentId}-${word.speaker}-${word.fileId}`;
+    if (!groupsMap.has(key)) {
+      groupsMap.set(key, {
+        segmentId: word.segmentId,
+        speaker: word.speaker,
+        fileId: word.fileId,
+        words: []
+      });
+    }
+    groupsMap.get(key).words.push(word);
+  });
+  
+  return Array.from(groupsMap.values());
+};
+  
 
 export default function ToolbarPlugin() {
   const [editor] = useLexicalComposerContext();
@@ -59,6 +84,7 @@ export default function ToolbarPlugin() {
   const HIGHLIGHT_RED = '#FF6347';
   const FORMAT_GREEN_HIGHLIGHT = 'format_green_highlight';
   const FORMAT_RED_HIGHLIGHT = 'format_red_highlight';
+
 
   const updateToolbar = useCallback(() => {
     const selection = $getSelection();
@@ -136,7 +162,7 @@ export default function ToolbarPlugin() {
     
     if (papercutEditor) {
       papercutEditor.update(() => {
-        appendToEnd(selectedContent);
+        appendToEnd(selectedContent); // Always append to end
       });
     }
     return true;
@@ -165,7 +191,7 @@ export default function ToolbarPlugin() {
     
     if (papercutEditor) {
       papercutEditor.update(() => {
-        handleContent(selectedContent);
+        handleContent(selectedContent); // Insert at cursor position if possible
       });
     }
     return true;
@@ -229,67 +255,64 @@ export default function ToolbarPlugin() {
   };
   
   const handleContent = (words) => {
-    const selection = $getSelection();
-    if (!$isRangeSelection(selection)) {
-      // If there's no valid selection, append to the end
-      appendToEnd(words);
-      return;
+  const selection = $getSelection();
+  if (!$isRangeSelection(selection)) {
+    appendToEnd(words);
+    return;
+  }
+
+  // Get current word at cursor
+  const anchorNode = selection.anchor.getNode();
+  let currentWord = null;
+  
+  if ($isPaperCutWordNode(anchorNode)) {
+    currentWord = anchorNode;
+  } else {
+    const parent = anchorNode.getParent();
+    if (parent && $isPaperCutWordNode(parent)) {
+      currentWord = parent;
     }
-  
-    const anchor = selection.anchor;
-    const focus = selection.focus;
-    const isAtEnd = anchor.key === focus.key && anchor.offset === focus.offset && anchor.type === 'element' && anchor.getNode().getLastChild() === null;
-  
-    if (isAtEnd) {
-      // If the cursor is at the very end, use appendToEnd
-      appendToEnd(words);
-    } else {
-      // Insert at the current cursor position
-      const newSegments = groupWordsBySegment(words);
-  
-      newSegments.forEach((segment) => {
-        const segmentNode = $createPaperCutSegmentNode(
-          segment.words[0].startTime,
-          segment.words[segment.words.length - 1].endTime,
-          segment.segmentId,
-          segment.speaker,
-          segment.fileId
-        );
-  
-        const speakerNode = $createPaperCutSpeakerNode(segment.speaker);
-        segmentNode.append(speakerNode);
-  
-        segment.words.forEach((wordData, index) => {
-          const wordNode = $createPaperCutWordNode(
-            wordData.text,
-            wordData.startTime,
-            wordData.endTime,
-            wordData.segmentId,
-            wordData.speaker,
-            wordData.fileId,
-            wordData.wordIndex
-          );
-          speakerNode.append(wordNode);
-  
-          if (index < segment.words.length - 1) {
-            speakerNode.append(
-              $createPaperCutWordNode(
-                ' ',
-                wordData.endTime,
-                segment.words[index + 1].startTime,
-                wordData.segmentId,
-                wordData.speaker,
-                wordData.fileId,
-                -1
-              )
-            );
-          }
-        });
-  
-        selection.insertNodes([segmentNode]);
-      });
+  }
+
+  if (!currentWord) {
+    appendToEnd(words);
+    return;
+  }
+
+  const parentSpeaker = currentWord.getParent();
+  if (!parentSpeaker || !$isPaperCutSpeakerNode(parentSpeaker)) {
+    appendToEnd(words);
+    return;
+  }
+
+  // Insert words at cursor position
+  words.forEach((wordData, index) => {
+    const wordNode = $createPaperCutWordNode(
+      wordData.text,
+      wordData.startTime,
+      wordData.endTime,
+      currentWord.getSegmentId(),
+      currentWord.getSpeaker(),
+      wordData.fileId,
+      wordData.wordIndex
+    );
+
+    const spaceNode = index < words.length - 1 ? $createPaperCutWordNode(
+      ' ',
+      wordData.endTime,
+      words[index + 1].startTime,
+      currentWord.getSegmentId(),
+      currentWord.getSpeaker(),
+      wordData.fileId,
+      -1
+    ) : null;
+
+    selection.insertNodes([wordNode]);
+    if (spaceNode) {
+      selection.insertNodes([spaceNode]);
     }
-  };
+  });
+};
   
   useEffect(() => {
     return mergeRegister(

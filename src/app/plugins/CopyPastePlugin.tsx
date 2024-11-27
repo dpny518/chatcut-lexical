@@ -3,6 +3,7 @@ import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext
 import { 
   $getRoot, 
   $getSelection,
+  $getNodeByKey,
   $isRangeSelection,
   COMMAND_PRIORITY_LOW, 
   COPY_COMMAND,
@@ -390,16 +391,57 @@ export function CopyPastePlugin() {
       event.preventDefault();
       const droppedText = event.dataTransfer?.getData('text/plain');
       
-      if (!droppedText) return;
-
-      editor.update(() => {
-        const words = parseContent(droppedText);
-        if (words.length > 0) {
-          handleContent(words);
+      if (droppedText) {
+        const doc = event.target instanceof Node ? event.target.ownerDocument : document;
+        if (doc) {
+          let caretPosition: any = null;
+          if ('caretPositionFromPoint' in doc) {
+            caretPosition = (doc as any).caretPositionFromPoint(event.clientX, event.clientY);
+          } else if ('caretRangeFromPoint' in doc) {
+            caretPosition = (doc as any).caretRangeFromPoint(event.clientX, event.clientY);
+          }
+    
+          if (caretPosition) {
+            const range = doc.createRange();
+            if ('offsetNode' in caretPosition && 'offset' in caretPosition) {
+              range.setStart(caretPosition.offsetNode, caretPosition.offset);
+            } else if (caretPosition instanceof Range) {
+              range.setStart(caretPosition.startContainer, caretPosition.startOffset);
+            }
+            range.collapse(true);
+            
+            const selection = window.getSelection();
+            selection?.removeAllRanges();
+            selection?.addRange(range);
+            
+            editor.update(() => {
+              // Parse the dropped text into word data
+              const words = parseContent(droppedText);
+              if (words.length > 0) {
+                handleContent(words);
+              }
+            });
+          } else {
+            // Fallback if caretPositionFromPoint and caretRangeFromPoint are not supported
+            editor.update(() => {
+              const words = parseContent(droppedText);
+              if (words.length > 0) {
+                handleContent(words);
+              }
+            });
+          }
+        } else {
+          // Fallback if we couldn't get a valid document
+          editor.update(() => {
+            const words = parseContent(droppedText);
+            if (words.length > 0) {
+              handleContent(words);
+            }
+          });
         }
-      });
+      }
     };
-
+    
     const rootElement = editor.getRootElement();
     if (rootElement) {
       rootElement.addEventListener('dragstart', dragStartHandler);
