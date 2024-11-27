@@ -132,3 +132,46 @@ editorcontent.tsx (Consumer)
 └── Updates Editor:
     ├── Clears/updates content
     └── Manages copy commands
+
+ooking at the input data format from paste-4.txt, it's structured like this:
+word|startTime|endTime|segmentId|speaker|fileId|wordIndex
+The key pieces I can see are:
+
+Data Format Parsing:
+Each line contains word timing information in a pipe-delimited format. For example:
+
+CopyI|23.196|23.236|5|SPEAKER_00|f3c9dec6-a533-42ec-b8e7-3a81b6edf9c5|0
+This contains:
+
+Word: "I"
+Start time: 23.196
+End time: 23.236
+Segment ID: 5
+Speaker: "SPEAKER_00"
+File ID: f3c9dec6-...
+Word Index: 0
+
+
+Node Structure:
+
+
+PaperCutWordNode stores individual word timing info
+PaperCutSpeakerNode groups words by speaker
+PaperCutSegmentNode groups words into segments/paragraphs
+
+
+Node Creation Flow:
+When content is pasted:
+The text is parsed into individual word entries
+For each segment:
+
+A PaperCutSegmentNode is created with the segment metadata
+A PaperCutSpeakerNode is created for the speaker
+Multiple PaperCutWordNode instances are created for each word with their timing info
+
+
+Hierarchy:
+
+CopyPaperCutSegmentNode
+  └─ PaperCutSpeakerNode
+       └─ PaperCutWordNode (multiple)

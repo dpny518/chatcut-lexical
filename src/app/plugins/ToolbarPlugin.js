@@ -113,11 +113,10 @@ export default function ToolbarPlugin() {
     },
     [editor]
   );
-
   const handleAddToPaperCut = useCallback(() => {
     const selection = $getSelection();
     if (!$isRangeSelection(selection)) return false;
-
+  
     const nodes = selection.getNodes();
     const selectedContent = nodes
       .filter(isWordNode)
@@ -130,56 +129,23 @@ export default function ToolbarPlugin() {
         fileId: node.getFileId(),
         wordIndex: node.getWordIndex()
       }));
-
+  
     if (selectedContent.length === 0) return false;
-
+  
     const papercutEditor = getActivePaperCutEditor();
     
     if (papercutEditor) {
       papercutEditor.update(() => {
-        const root = $getRoot();
-        let currentSpeaker = '';
-        let paragraphNode = $createParagraphNode();
-
-        selectedContent.forEach((word) => {
-          if (word.speaker !== currentSpeaker) {
-            currentSpeaker = word.speaker;
-            
-            if (paragraphNode.getTextContent()) {
-              root.append(paragraphNode);
-              paragraphNode = $createParagraphNode();
-            }
-
-            const speakerNameNode = $createTextNode(`${word.speaker}: `);
-            speakerNameNode.toggleFormat('bold');
-            paragraphNode.append(speakerNameNode);
-          }
-
-          const wordNode = $createPaperCutWordNode(
-            word.text,
-            word.startTime,
-            word.endTime,
-            word.segmentId,
-            word.speaker,
-            word.fileId,
-            word.wordIndex
-          );
-          paragraphNode.append(wordNode);
-          paragraphNode.append($createTextNode(' '));
-        });
-
-        if (paragraphNode.getTextContent()) {
-          root.append(paragraphNode);
-        }
+        appendToEnd(selectedContent);
       });
     }
     return true;
   }, [getActivePaperCutEditor]);
-
+  
   const handleInsertToPaperCut = useCallback(() => {
     const selection = $getSelection();
     if (!$isRangeSelection(selection)) return false;
-
+  
     const nodes = selection.getNodes();
     const selectedContent = nodes
       .filter(isWordNode)
@@ -192,60 +158,138 @@ export default function ToolbarPlugin() {
         fileId: node.getFileId(),
         wordIndex: node.getWordIndex()
       }));
-
+  
     if (selectedContent.length === 0) return false;
-
+  
     const papercutEditor = getActivePaperCutEditor();
     
     if (papercutEditor) {
       papercutEditor.update(() => {
-        const selection = $getSelection();
-        if (!selection) {
-          // If no selection, do nothing
-          return;
-        }
-
-        let currentSpeaker = '';
-        let paragraphNode = selection.anchor.getNode();
-        
-        // If we're not in a paragraph, create one
-        if (!paragraphNode.getType() === 'paragraph') {
-          paragraphNode = $createParagraphNode();
-          selection.insertNodes([paragraphNode]);
-        }
-
-        const contentNodes = [];
-        selectedContent.forEach((word) => {
-          if (word.speaker !== currentSpeaker) {
-            currentSpeaker = word.speaker;
-            
-            if (contentNodes.length > 0) {
-              contentNodes.push($createTextNode(' '));
-            }
-
-            const speakerNameNode = $createTextNode(`${word.speaker}: `);
-            speakerNameNode.toggleFormat('bold');
-            contentNodes.push(speakerNameNode);
-          }
-
-          const wordNode = $createPaperCutWordNode(
-            word.text,
-            word.startTime,
-            word.endTime,
-            word.segmentId,
-            word.speaker,
-            word.fileId,
-            word.wordIndex
-          );
-          contentNodes.push(wordNode);
-          contentNodes.push($createTextNode(' '));
-        });
-
-        selection.insertNodes(contentNodes);
+        handleContent(selectedContent);
       });
     }
     return true;
   }, [getActivePaperCutEditor]);
+  
+  const appendToEnd = (words) => {
+    const root = $getRoot();
+    let lastSegment = root.getLastChild();
+    if (!$isPaperCutSegmentNode(lastSegment)) {
+      lastSegment = null;
+    }
+  
+    const newSegments = groupWordsBySegment(words);
+  
+    newSegments.forEach((segment) => {
+      const segmentNode = $createPaperCutSegmentNode(
+        segment.words[0].startTime,
+        segment.words[segment.words.length - 1].endTime,
+        segment.segmentId,
+        segment.speaker,
+        segment.fileId
+      );
+  
+      const speakerNode = $createPaperCutSpeakerNode(segment.speaker);
+      segmentNode.append(speakerNode);
+  
+      segment.words.forEach((wordData, index) => {
+        const wordNode = $createPaperCutWordNode(
+          wordData.text,
+          wordData.startTime,
+          wordData.endTime,
+          wordData.segmentId,
+          wordData.speaker,
+          wordData.fileId,
+          wordData.wordIndex
+        );
+        speakerNode.append(wordNode);
+  
+        if (index < segment.words.length - 1) {
+          speakerNode.append(
+            $createPaperCutWordNode(
+              ' ',
+              wordData.endTime,
+              segment.words[index + 1].startTime,
+              wordData.segmentId,
+              wordData.speaker,
+              wordData.fileId,
+              -1
+            )
+          );
+        }
+      });
+  
+      if (lastSegment) {
+        lastSegment.insertAfter(segmentNode);
+      } else {
+        root.append(segmentNode);
+      }
+      lastSegment = segmentNode;
+    });
+  };
+  
+  const handleContent = (words) => {
+    const selection = $getSelection();
+    if (!$isRangeSelection(selection)) {
+      // If there's no valid selection, append to the end
+      appendToEnd(words);
+      return;
+    }
+  
+    const anchor = selection.anchor;
+    const focus = selection.focus;
+    const isAtEnd = anchor.key === focus.key && anchor.offset === focus.offset && anchor.type === 'element' && anchor.getNode().getLastChild() === null;
+  
+    if (isAtEnd) {
+      // If the cursor is at the very end, use appendToEnd
+      appendToEnd(words);
+    } else {
+      // Insert at the current cursor position
+      const newSegments = groupWordsBySegment(words);
+  
+      newSegments.forEach((segment) => {
+        const segmentNode = $createPaperCutSegmentNode(
+          segment.words[0].startTime,
+          segment.words[segment.words.length - 1].endTime,
+          segment.segmentId,
+          segment.speaker,
+          segment.fileId
+        );
+  
+        const speakerNode = $createPaperCutSpeakerNode(segment.speaker);
+        segmentNode.append(speakerNode);
+  
+        segment.words.forEach((wordData, index) => {
+          const wordNode = $createPaperCutWordNode(
+            wordData.text,
+            wordData.startTime,
+            wordData.endTime,
+            wordData.segmentId,
+            wordData.speaker,
+            wordData.fileId,
+            wordData.wordIndex
+          );
+          speakerNode.append(wordNode);
+  
+          if (index < segment.words.length - 1) {
+            speakerNode.append(
+              $createPaperCutWordNode(
+                ' ',
+                wordData.endTime,
+                segment.words[index + 1].startTime,
+                wordData.segmentId,
+                wordData.speaker,
+                wordData.fileId,
+                -1
+              )
+            );
+          }
+        });
+  
+        selection.insertNodes([segmentNode]);
+      });
+    }
+  };
   
   useEffect(() => {
     return mergeRegister(

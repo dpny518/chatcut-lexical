@@ -29,13 +29,22 @@ export class PaperCutWordNode extends TextNode {
   
 
 // Override remove to handle word-level deletion
+
 remove(preserveEmptyParent?: boolean): void {
   const latest = this.getLatest();
   if (latest.__key === this.__key) {
+    this.selectPrevious();
     super.remove(preserveEmptyParent);
   }
 }
 
+replace<N extends LexicalNode>(replaceWith: N): N {
+  const latest = this.getLatest();
+  if (latest.__key === this.__key) {
+    return super.replace(replaceWith);
+  }
+  return replaceWith;
+}
 
 
   constructor(
@@ -101,41 +110,53 @@ remove(preserveEmptyParent?: boolean): void {
   }
 
   // Override splitText with safety checks
-  splitText(splitOffset: number): [TextNode, TextNode] {
-    if (!this.__text) {
-      throw new Error('PaperCutWordNode.splitText: Node has no text content');
-    }
-
-    try {
-      const [left, right] = super.splitText(splitOffset);
-      
-      const leftNode = new PaperCutWordNode(
-        left.__text || '',
-        this.__startTime,
-        this.__startTime + (this.__endTime - this.__startTime) * (splitOffset / this.__text.length),
-        this.__segmentId,
-        this.__speaker,
-        this.__fileId,
-        this.__wordIndex
-      );
-
-      const rightNode = new PaperCutWordNode(
-        right.__text || '',
-        leftNode.__endTime,
-        this.__endTime,
-        this.__segmentId,
-        this.__speaker,
-        this.__fileId,
-        this.__wordIndex + 1
-      );
-
-      return [leftNode, rightNode];
-    } catch (error) {
-      console.error('Error in PaperCutWordNode.splitText:', error);
-      // Return a safe fallback
-      return [this, this.clone()];
-    }
+// Override splitText with more robust error handling
+splitText(splitOffset: number): [TextNode, TextNode] {
+  // First check if split is possible
+  const text = this.getTextContent();
+  if (!text || splitOffset < 0 || splitOffset >= text.length) {
+    // Return safe fallback if split isn't possible
+    return [this, this.clone()];
   }
+
+  try {
+    // First let TextNode handle the basic split
+    const [left, right] = super.splitText(splitOffset);
+    
+    // Calculate the proportional time for split point
+    const timeRatio = splitOffset / text.length;
+    const splitTime = this.__startTime + (this.__endTime - this.__startTime) * timeRatio;
+    
+    // Create new left node
+    const leftNode = $createPaperCutWordNode(
+      text.slice(0, splitOffset),
+      this.__startTime,
+      splitTime,
+      this.__segmentId,
+      this.__speaker,
+      this.__fileId,
+      this.__wordIndex
+    );
+
+    // Create new right node
+    const rightNode = $createPaperCutWordNode(
+      text.slice(splitOffset),
+      splitTime,
+      this.__endTime,
+      this.__segmentId,
+      this.__speaker,
+      this.__fileId,
+      this.__wordIndex + 1
+    );
+
+    return [leftNode, rightNode];
+  } catch (error) {
+    console.error('Error in PaperCutWordNode.splitText:', error);
+    // Return a safe fallback
+    const clone = this.clone();
+    return [this, clone];
+  }
+}
 
   // Add safety checks to exported JSON
   exportJSON(): SerializedPaperCutWordNode {
@@ -247,12 +268,23 @@ export function $createPaperCutWordNode(
   fileId: string,
   wordIndex: number
 ): PaperCutWordNode {
-  if (!text || text === undefined) {
-    console.warn('$createPaperCutWordNode: text is required');
-    text = '';
+  try {
+    return new PaperCutWordNode(
+      text || '',
+      startTime || 0,
+      endTime || 0,
+      segmentId || '',
+      speaker || '',
+      fileId || '',
+      wordIndex || 0
+    );
+  } catch (error) {
+    console.error('Error creating PaperCutWordNode:', error);
+    // Return a safe fallback node
+    return new PaperCutWordNode('', 0, 0, '', '', '', 0);
   }
-  return new PaperCutWordNode(text, startTime, endTime, segmentId, speaker, fileId, wordIndex);
 }
+
 
 export function $isPaperCutWordNode(node: LexicalNode | null | undefined): node is PaperCutWordNode {
   return node instanceof PaperCutWordNode;

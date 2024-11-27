@@ -9,15 +9,16 @@ import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin';
 import LexicalErrorBoundary from '@lexical/react/LexicalErrorBoundary';
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { EditorState, LexicalEditor as LexicalEditorType } from 'lexical';
-import { PaperCutWordNode } from '@/app/nodes/PaperCutWordNode';
-import { PaperCutSpeakerNode } from '@/app/nodes/PaperCutSpeakerNode';
-import { PaperCutSegmentNode } from '@/app/nodes/PaperCutSegmentNode';
+import { $isPaperCutWordNode, PaperCutWordNode } from '@/app/nodes/PaperCutWordNode';
+import {  $isPaperCutSpeakerNode ,PaperCutSpeakerNode } from '@/app/nodes/PaperCutSpeakerNode';
+import {  $isPaperCutSegmentNode, PaperCutSegmentNode } from '@/app/nodes/PaperCutSegmentNode';
 import { CopyPastePlugin } from '@/app/plugins/CopyPastePlugin';
 import { WordHoverPlugin } from '@/app/plugins/WordHoverPlugin';
 import { EditRestrictionPlugin } from '@/app/plugins/EditRestrictionPlugin';
 import PaperCutToolbarPlugin from '@/app/plugins/PaperCutToolbarPlugin';
 import { useEditors } from '@/app/contexts/EditorContext';
 import { ClearEditorPlugin } from '@/app/plugins/ClearEditorPlugin';
+import {TextNode} from 'lexical'
 
 interface LexicalEditorProps {
   initialState: string | null;
@@ -61,13 +62,22 @@ function LexicalEditorComponent({ initialState, onChange, tabId }: LexicalEditor
 
   const editorConfig = useMemo(() => ({
     namespace: `PaperCutEditor-${tabId}`,
-    onError: (error: Error) => console.error(error),
+    onError: (error: Error) => {
+      console.error('Lexical Editor Error:', error);
+    },
     editorState: initialState,
     nodes: [
       PaperCutWordNode,
       PaperCutSpeakerNode,
-      PaperCutSegmentNode
-    ]
+      PaperCutSegmentNode,
+      {
+        replace: TextNode,
+        with: (node: TextNode) => new PaperCutWordNode(node.getTextContent(), 0, 0, '', '', '', 0),
+      },
+    ],
+    theme: {
+      // Add theme if needed
+    },
   }), [initialState, tabId]);
 
   return (

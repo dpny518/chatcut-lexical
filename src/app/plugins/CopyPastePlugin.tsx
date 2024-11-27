@@ -1,52 +1,340 @@
-// src/app/plugins/CopyPastePlugin.tsx
-
 import React from 'react';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { 
   $getRoot, 
-  $createTextNode, 
   $getSelection,
   $isRangeSelection,
-  $createParagraphNode,
   COMMAND_PRIORITY_LOW, 
   COPY_COMMAND,
-  PASTE_COMMAND, 
+  PASTE_COMMAND,
   TextNode,
-  LexicalCommand,
   $createRangeSelection,
   $setSelection,
-  RangeSelection
+  RangeSelection,
+  BaseSelection
 } from 'lexical';
-import { PaperCutWordNode, $createPaperCutWordNode, $isPaperCutWordNode } from '@/app/nodes/PaperCutWordNode';
-import { PaperCutSpeakerNode, $createPaperCutSpeakerNode, $isPaperCutSpeakerNode } from '@/app/nodes/PaperCutSpeakerNode';
-import { PaperCutSegmentNode, $createPaperCutSegmentNode, $isPaperCutSegmentNode } from '@/app/nodes/PaperCutSegmentNode';
+import { $isPaperCutSpeakerNode, $createPaperCutSpeakerNode, PaperCutSpeakerNode } from '@/app/nodes/PaperCutSpeakerNode';
+import { $isPaperCutWordNode, $createPaperCutWordNode, PaperCutWordNode } from '@/app/nodes/PaperCutWordNode';
+import { $isPaperCutSegmentNode, $createPaperCutSegmentNode , PaperCutSegmentNode} from '@/app/nodes/PaperCutSegmentNode';
 
-type WordData = [string, string, string, string, string, string, string];
+type WordData = {
+  text: string;
+  startTime: number;
+  endTime: number;
+  segmentId: string;
+  speaker: string;
+  fileId: string;
+  wordIndex: number;
+};
+
+type SegmentGroup = {
+  segmentId: string;
+  speaker: string;
+  fileId: string;
+  words: WordData[];
+};
 
 export function CopyPastePlugin() {
   const [editor] = useLexicalComposerContext();
   const [isDragging, setIsDragging] = React.useState(false);
 
-
-
   React.useEffect(() => {
-    // Copy handler
+    // Parse content helper
+    const parseContent = (content: string): WordData[] => {
+      return content.split(/\n/)
+        .join(' ')
+        .split(/\s+/)
+        .filter(word => word.trim() !== '')
+        .map(word => {
+          const [text, startTime, endTime, segmentId, speaker, fileId, wordIndex] = word.split('|');
+          return {
+            text,
+            startTime: parseFloat(startTime) || 0,
+            endTime: parseFloat(endTime) || 0,
+            segmentId: segmentId || '',
+            speaker: speaker || '',
+            fileId: fileId || '',
+            wordIndex: parseInt(wordIndex) || 0
+          };
+        });
+    };
+    
+    // Group words by segment helper
+    const groupWordsBySegment = (words: WordData[]): SegmentGroup[] => {
+      const groupsMap = new Map<string, SegmentGroup>();
+      
+      words.forEach(word => {
+        const key = `${word.segmentId}-${word.speaker}-${word.fileId}`;
+        if (!groupsMap.has(key)) {
+          groupsMap.set(key, {
+            segmentId: word.segmentId,
+            speaker: word.speaker,
+            fileId: word.fileId,
+            words: []
+          });
+        }
+        groupsMap.get(key)?.words.push(word);
+      });
+      
+      return Array.from(groupsMap.values());
+    };
+
+    const handleContentAtCursor = (words: WordData[], selection: RangeSelection) => {
+      const anchor = selection.anchor;
+      const anchorNode = anchor.getNode();
+      
+      let currentWord: PaperCutWordNode | null = null;
+      if ($isPaperCutWordNode(anchorNode)) {
+        currentWord = anchorNode;
+      } else {
+        const parent = anchorNode.getParent();
+        if (parent && $isPaperCutWordNode(parent)) {
+          currentWord = parent;
+        }
+      }
+
+      if (!currentWord) return;
+
+      const parentSpeaker = currentWord.getParent();
+      if (!parentSpeaker || !$isPaperCutSpeakerNode(parentSpeaker)) return;
+
+      // Insert words at cursor position, preserving the current segment context
+      words.forEach((wordData, index) => {
+        const wordNode = $createPaperCutWordNode(
+          wordData.text,
+          wordData.startTime,
+          wordData.endTime,
+          currentWord!.getSegmentId(),
+          currentWord!.getSpeaker(),
+          wordData.fileId,
+          wordData.wordIndex
+        );
+
+        const spaceNode = $createPaperCutWordNode(
+          ' ',
+          wordData.endTime,
+          index < words.length - 1 ? words[index + 1].startTime : wordData.endTime + 0.01,
+          currentWord!.getSegmentId(),
+          currentWord!.getSpeaker(),
+          wordData.fileId,
+          -1
+        );
+
+        selection.insertNodes([wordNode, spaceNode]);
+      });
+    };
+
+    const appendToEnd = (pastedWords: WordData[]) => {
+      editor.update(() => {
+        const root = $getRoot();
+        let lastSegment = root.getLastChild();
+        if (!$isPaperCutSegmentNode(lastSegment)) {
+          lastSegment = null;
+        }
+    
+        const newSegments = groupWordsBySegment(pastedWords);
+    
+        newSegments.forEach((segment) => {
+          const segmentNode = $createPaperCutSegmentNode(
+            segment.words[0].startTime,
+            segment.words[segment.words.length - 1].endTime,
+            segment.segmentId,
+            segment.speaker,
+            segment.fileId
+          );
+    
+          const speakerNode = $createPaperCutSpeakerNode(segment.speaker);
+          segmentNode.append(speakerNode);
+    
+          segment.words.forEach((wordData, index) => {
+            const wordNode = $createPaperCutWordNode(
+              wordData.text,
+              wordData.startTime,
+              wordData.endTime,
+              wordData.segmentId,
+              wordData.speaker,
+              wordData.fileId,
+              wordData.wordIndex
+            );
+            speakerNode.append(wordNode);
+    
+            if (index < segment.words.length - 1) {
+              speakerNode.append(
+                $createPaperCutWordNode(
+                  ' ',
+                  wordData.endTime,
+                  segment.words[index + 1].startTime,
+                  wordData.segmentId,
+                  wordData.speaker,
+                  wordData.fileId,
+                  -1
+                )
+              );
+            }
+          });
+    
+          if (lastSegment) {
+            lastSegment.insertAfter(segmentNode);
+          } else {
+            root.append(segmentNode);
+          }
+          lastSegment = segmentNode;
+        });
+      });
+    };
+
+    const createNewSegments = (words: WordData[]) => {
+      const selection = $getSelection();
+      if (!$isRangeSelection(selection)) return;
+    
+      const segments = new Map<string, WordData[]>();
+      words.forEach(word => {
+        const key = `${word.segmentId}-${word.speaker}-${word.fileId}`;
+        if (!segments.has(key)) {
+          segments.set(key, []);
+        }
+        segments.get(key)?.push(word);
+      });
+    
+      segments.forEach((segmentWords, key) => {
+        const firstWord = segmentWords[0];
+        const lastWord = segmentWords[segmentWords.length - 1];
+    
+        const segmentNode = $createPaperCutSegmentNode(
+          firstWord.startTime,
+          lastWord.endTime,
+          firstWord.segmentId,
+          firstWord.speaker,
+          firstWord.fileId
+        );
+    
+        const speakerNode = $createPaperCutSpeakerNode(firstWord.speaker);
+        segmentNode.append(speakerNode);
+    
+        segmentWords.forEach((wordData, index) => {
+          const wordNode = $createPaperCutWordNode(
+            wordData.text,
+            wordData.startTime,
+            wordData.endTime,
+            wordData.segmentId,
+            wordData.speaker,
+            wordData.fileId,
+            wordData.wordIndex
+          );
+          speakerNode.append(wordNode);
+    
+          if (index < segmentWords.length - 1) {
+            const nextWord = segmentWords[index + 1];
+            speakerNode.append($createPaperCutWordNode(
+              ' ',
+              wordData.endTime,
+              nextWord.startTime,
+              wordData.segmentId,
+              wordData.speaker,
+              wordData.fileId,
+              -1
+            ));
+          }
+        });
+    
+        selection.insertNodes([segmentNode]);
+      });
+    };
+
+    const handleContent = (words: WordData[]) => {
+      const selection = $getSelection();
+      if (!$isRangeSelection(selection)) return;
+    
+      const anchorNode = selection.anchor.getNode();
+      
+      let currentWord: PaperCutWordNode | null = null;
+      if ($isPaperCutWordNode(anchorNode)) {
+        currentWord = anchorNode;
+      } else {
+        const parent = anchorNode.getParent();
+        if (parent && $isPaperCutWordNode(parent)) {
+          currentWord = parent;
+        }
+      }
+    
+      if (!currentWord) {
+        appendToEnd(words);
+        return;
+      }
+    
+      const parentSpeaker = currentWord.getParent();
+      if (!parentSpeaker || !$isPaperCutSpeakerNode(parentSpeaker)) {
+        appendToEnd(words);
+        return;
+      }
+    
+      try {
+        // Create and insert nodes one at a time
+        words.forEach((wordData, index) => {
+          // Create new word node
+          const wordNode = $createPaperCutWordNode(
+            wordData.text,
+            wordData.startTime,
+            wordData.endTime,
+            currentWord!.getSegmentId(),
+            currentWord!.getSpeaker(),
+            wordData.fileId,
+            wordData.wordIndex
+          );
+    
+          // Create space node if needed
+          const spaceNode = index < words.length - 1 ? $createPaperCutWordNode(
+            ' ',
+            wordData.endTime,
+            words[index + 1].startTime,
+            currentWord!.getSegmentId(),
+            currentWord!.getSpeaker(),
+            wordData.fileId,
+            -1
+          ) : null;
+    
+          // Insert nodes
+          if (wordNode.isAttached()) {
+            wordNode.remove();
+          }
+          
+          selection.insertNodes([wordNode]);
+          if (spaceNode) {
+            selection.insertNodes([spaceNode]);
+          }
+        });
+      } catch (error) {
+        console.error('Error inserting nodes:', error);
+        // Fallback to append
+        appendToEnd(words);
+      }
+    };
+
     const copyHandler = editor.registerCommand<ClipboardEvent>(
       COPY_COMMAND,
       (event) => {
         const selection = $getSelection();
         if (!$isRangeSelection(selection)) return false;
 
-        const nodes = selection.getNodes();
-        const copiedData = nodes.map(node => {
+        const selectedNodes = selection.getNodes();
+        const nodes = new Set<PaperCutWordNode>();
+        
+        selectedNodes.forEach(node => {
           if ($isPaperCutWordNode(node)) {
-            return `${node.getTextContent()}|${node.getStartTime()}|${node.getEndTime()}|${node.getSegmentId()}|${node.getSpeaker()}|${node.getFileId()}|${node.getWordIndex()}`;
-          } else if ($isPaperCutSpeakerNode(node)) {
-            return `\n${node.getSpeaker()}:\n`;
+            nodes.add(node);
           } else {
-            return node.getTextContent();
+            const parent = node.getParent();
+            if (parent && $isPaperCutWordNode(parent)) {
+              nodes.add(parent);
+            }
           }
-        }).join(' ');
+        });
+
+        const copiedData = Array.from(nodes)
+          .map(node => {
+            return `${node.getTextContent()}|${node.getStartTime()}|${node.getEndTime()}|${node.getSegmentId()}|${node.getSpeaker()}|${node.getFileId()}|${node.getWordIndex()}`;
+          })
+          .join(' ');
 
         event.clipboardData?.setData('text/plain', copiedData);
         event.preventDefault();
@@ -55,24 +343,26 @@ export function CopyPastePlugin() {
       COMMAND_PRIORITY_LOW
     );
 
-    // Paste handler
     const pasteHandler = editor.registerCommand(
       PASTE_COMMAND,
       (payload) => {
         const clipboardData = payload instanceof ClipboardEvent ? payload.clipboardData : null;
         const pastedText = clipboardData ? clipboardData.getData('text/plain') : '';
-
+        
         if (!pastedText) return false;
 
-        handleContent(pastedText);
+        editor.update(() => {
+          const words = parseContent(pastedText);
+          if (words.length > 0) {
+            handleContent(words);
+          }
+        });
+
         return true;
       },
       COMMAND_PRIORITY_LOW
     );
 
-  
-  
-    // Drag start handler
     const dragStartHandler = (event: DragEvent) => {
       setIsDragging(true);
       
@@ -84,10 +374,9 @@ export function CopyPastePlugin() {
         const dragData = nodes.map(node => {
           if ($isPaperCutWordNode(node)) {
             return `${node.getTextContent()}|${node.getStartTime()}|${node.getEndTime()}|${node.getSegmentId()}|${node.getSpeaker()}|${node.getFileId()}|${node.getWordIndex()}`;
-          } else {
-            return node.getTextContent();
           }
-        }).join(' ');
+          return '';
+        }).filter(Boolean).join(' ');
       
         event.dataTransfer?.setData('text/plain', dragData);
       });
@@ -97,135 +386,21 @@ export function CopyPastePlugin() {
       setIsDragging(false);
     };
 
-    // Drop handler
-const dropHandler = (event: DragEvent) => {
-  event.preventDefault();
-  const droppedText = event.dataTransfer?.getData('text/plain');
-  if (droppedText) {
-    const doc = event.target instanceof Node ? event.target.ownerDocument : document;
-    if (doc) {
-      let caretPosition: any = null;
-      if ('caretPositionFromPoint' in doc) {
-        caretPosition = (doc as any).caretPositionFromPoint(event.clientX, event.clientY);
-      } else if ('caretRangeFromPoint' in doc) {
-        caretPosition = (doc as any).caretRangeFromPoint(event.clientX, event.clientY);
-      }
+    const dropHandler = (event: DragEvent) => {
+      event.preventDefault();
+      const droppedText = event.dataTransfer?.getData('text/plain');
+      
+      if (!droppedText) return;
 
-      if (caretPosition) {
-        const range = doc.createRange();
-        if ('offsetNode' in caretPosition && 'offset' in caretPosition) {
-          range.setStart(caretPosition.offsetNode, caretPosition.offset);
-        } else if (caretPosition instanceof Range) {
-          range.setStart(caretPosition.startContainer, caretPosition.startOffset);
-        }
-        range.collapse(true);
-        
-        const selection = window.getSelection();
-        selection?.removeAllRanges();
-        selection?.addRange(range);
-
-        editor.update(() => {
-          handleContent(droppedText);
-        });
-      } else {
-        // Fallback if caretPositionFromPoint and caretRangeFromPoint are not supported
-        editor.update(() => {
-          handleContent(droppedText);
-        });
-      }
-    } else {
-      // Fallback if we couldn't get a valid document
       editor.update(() => {
-        handleContent(droppedText);
-      });
-    }
-  }
-};
-
-    // Function to handle pasted or dropped content
-    const handleContent = (content: string) => {
-      const words = content.split(/\s+/).filter(word => word.trim() !== '');
-
-      const isValidContent = words.every(word => {
-        const parts = word.split('|');
-        return parts.length === 7 && 
-               !isNaN(parseFloat(parts[1])) && 
-               !isNaN(parseFloat(parts[2])) &&
-               !isNaN(parseInt(parts[6]));
-      });
-
-      if (!isValidContent) {
-        console.warn('Invalid content. Only content with metadata is allowed.');
-        return;
-      }
-
-      let selection = $getSelection();
-      if (!$isRangeSelection(selection)) {
-        const root = $getRoot();
-        const lastChild = root.getLastChild();
-        selection = $createRangeSelection();
-        if (lastChild) {
-          (selection as RangeSelection).focus.set(lastChild.getKey(), lastChild.getTextContent().length, 'text');
-        } else {
-          (selection as RangeSelection).focus.set(root.getKey(), 0, 'element');
-        }
-        $setSelection(selection);
-      }
-
-      let currentSpeaker = '';
-      let paragraphNode = $createParagraphNode();
-
-      words.forEach((word: string) => {
-        const parts = word.split('|');
-        if (parts.length === 7) {
-          const [text, startTime, endTime, segmentId, speaker, fileId, wordIndex] = parts as WordData;
-
-          if (speaker !== currentSpeaker) {
-            currentSpeaker = speaker;
-            
-            if (paragraphNode.getTextContent()) {
-              (selection as RangeSelection).insertNodes([paragraphNode]);
-              paragraphNode = $createParagraphNode();
-            }
-
-            // Add speaker name as a bold text node
-            const speakerNameNode = $createTextNode(speaker + ': ');
-            speakerNameNode.toggleFormat('bold');
-            paragraphNode.append(speakerNameNode);
-          }
-
-          const wordNode = $createPaperCutWordNode(
-            text,
-            parseFloat(startTime) || 0,
-            parseFloat(endTime) || 0,
-            segmentId,
-            speaker,
-            fileId,
-            parseInt(wordIndex) || 0
-          );
-          paragraphNode.append(wordNode);
-          paragraphNode.append($createTextNode(' ')); // Add space between words
-        } else {
-          // If it's not in our special format, just insert it as plain text
-          paragraphNode.append($createTextNode(word + ' '));
+        const words = parseContent(droppedText);
+        if (words.length > 0) {
+          handleContent(words);
         }
       });
-
-      // Insert the last paragraph if it's not empty
-      if (paragraphNode.getTextContent()) {
-        (selection as RangeSelection).insertNodes([paragraphNode]);
-      }
-
-      // Move selection to the end of the inserted content
-      const lastNode = paragraphNode.getLastDescendant();
-      if (lastNode instanceof TextNode || lastNode instanceof PaperCutWordNode) {
-        (selection as RangeSelection).setTextNodeRange(lastNode, lastNode.getTextContent().length, lastNode, lastNode.getTextContent().length);
-      }
     };
 
-    // Add event listeners for drag and drop
     const rootElement = editor.getRootElement();
-    // Add event listeners for drag and drop
     if (rootElement) {
       rootElement.addEventListener('dragstart', dragStartHandler);
       rootElement.addEventListener('dragend', dragEndHandler);
@@ -233,14 +408,6 @@ const dropHandler = (event: DragEvent) => {
       rootElement.addEventListener('drop', dropHandler);
     }
 
-    // Update dragging class
-    if (isDragging) {
-      rootElement?.classList.add('dragging');
-    } else {
-      rootElement?.classList.remove('dragging');
-    }
-  
-    // Clean up
     return () => {
       copyHandler();
       pasteHandler();
