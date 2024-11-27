@@ -3,6 +3,7 @@ import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext
 import { 
   $getRoot, 
   $getSelection,
+  $createTextNode,
   $getNodeByKey,
   $isRangeSelection,
   COMMAND_PRIORITY_LOW, 
@@ -17,6 +18,7 @@ import {
 import { $isPaperCutSpeakerNode, $createPaperCutSpeakerNode, PaperCutSpeakerNode } from '@/app/nodes/PaperCutSpeakerNode';
 import { $isPaperCutWordNode, $createPaperCutWordNode, PaperCutWordNode } from '@/app/nodes/PaperCutWordNode';
 import { $isPaperCutSegmentNode, $createPaperCutSegmentNode , PaperCutSegmentNode} from '@/app/nodes/PaperCutSegmentNode';
+import { reorganizeWords } from '@/app/utils/editorHelpers';
 
 type WordData = {
   text: string;
@@ -42,9 +44,7 @@ export function CopyPastePlugin() {
   React.useEffect(() => {
     // Parse content helper
     const parseContent = (content: string): WordData[] => {
-      return content.split(/\n/)
-        .join(' ')
-        .split(/\s+/)
+      return content.split(/\s+/)
         .filter(word => word.trim() !== '')
         .map(word => {
           const [text, startTime, endTime, segmentId, speaker, fileId, wordIndex] = word.split('|');
@@ -241,7 +241,6 @@ export function CopyPastePlugin() {
         selection.insertNodes([segmentNode]);
       });
     };
-
     const handleContent = (words: WordData[]) => {
       const selection = $getSelection();
       if (!$isRangeSelection(selection)) return;
@@ -270,9 +269,7 @@ export function CopyPastePlugin() {
       }
     
       try {
-        // Create and insert nodes one at a time
         words.forEach((wordData, index) => {
-          // Create new word node
           const wordNode = $createPaperCutWordNode(
             wordData.text,
             wordData.startTime,
@@ -283,30 +280,16 @@ export function CopyPastePlugin() {
             wordData.wordIndex
           );
     
-          // Create space node if needed
-          const spaceNode = index < words.length - 1 ? $createPaperCutWordNode(
-            ' ',
-            wordData.endTime,
-            words[index + 1].startTime,
-            currentWord!.getSegmentId(),
-            currentWord!.getSpeaker(),
-            wordData.fileId,
-            -1
-          ) : null;
-    
-          // Insert nodes
-          if (wordNode.isAttached()) {
-            wordNode.remove();
-          }
-          
           selection.insertNodes([wordNode]);
-          if (spaceNode) {
-            selection.insertNodes([spaceNode]);
+          
+          // Insert a regular space TextNode after each word (except the last one)
+          if (index < words.length - 1) {
+            selection.insertNodes([$createTextNode(' ')]);
           }
         });
+        reorganizeWords(editor);
       } catch (error) {
         console.error('Error inserting nodes:', error);
-        // Fallback to append
         appendToEnd(words);
       }
     };
@@ -316,27 +299,21 @@ export function CopyPastePlugin() {
       (event) => {
         const selection = $getSelection();
         if (!$isRangeSelection(selection)) return false;
-
+    
         const selectedNodes = selection.getNodes();
-        const nodes = new Set<PaperCutWordNode>();
-        
-        selectedNodes.forEach(node => {
-          if ($isPaperCutWordNode(node)) {
-            nodes.add(node);
-          } else {
-            const parent = node.getParent();
-            if (parent && $isPaperCutWordNode(parent)) {
-              nodes.add(parent);
-            }
-          }
-        });
-
-        const copiedData = Array.from(nodes)
+        const wordNodes = selectedNodes.filter($isPaperCutWordNode);
+    
+        if (wordNodes.length === 0) {
+          // If no PaperCutWordNodes are selected, let the default copy behavior happen
+          return false;
+        }
+    
+        const copiedData = wordNodes
           .map(node => {
             return `${node.getTextContent()}|${node.getStartTime()}|${node.getEndTime()}|${node.getSegmentId()}|${node.getSpeaker()}|${node.getFileId()}|${node.getWordIndex()}`;
           })
           .join(' ');
-
+    
         event.clipboardData?.setData('text/plain', copiedData);
         event.preventDefault();
         return true;
@@ -372,12 +349,16 @@ export function CopyPastePlugin() {
         if (!$isRangeSelection(selection)) return;
       
         const nodes = selection.getNodes();
-        const dragData = nodes.map(node => {
-          if ($isPaperCutWordNode(node)) {
-            return `${node.getTextContent()}|${node.getStartTime()}|${node.getEndTime()}|${node.getSegmentId()}|${node.getSpeaker()}|${node.getFileId()}|${node.getWordIndex()}`;
-          }
-          return '';
-        }).filter(Boolean).join(' ');
+        const wordNodes = nodes.filter($isPaperCutWordNode);
+    
+        if (wordNodes.length === 0) {
+          // If no PaperCutWordNodes are selected, let the default drag behavior happen
+          return;
+        }
+    
+        const dragData = wordNodes.map(node => {
+          return `${node.getTextContent()}|${node.getStartTime()}|${node.getEndTime()}|${node.getSegmentId()}|${node.getSpeaker()}|${node.getFileId()}|${node.getWordIndex()}`;
+        }).join(' ');
       
         event.dataTransfer?.setData('text/plain', dragData);
       });

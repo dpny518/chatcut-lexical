@@ -28,8 +28,20 @@ export class PaperCutSpeakerNode extends ElementNode {
   createDOM(): HTMLElement {
     const dom = document.createElement('div');
     dom.classList.add('papercut-speaker');
+    
+    const speakerWrapper = document.createElement('div');
+    speakerWrapper.classList.add('speaker-wrapper');
+    
+    const label = document.createElement('span');
+    label.classList.add('speaker-label');
+    label.textContent = `${this.__speaker}:`;
+    speakerWrapper.appendChild(label);
+    
+    dom.appendChild(speakerWrapper);
+    
     return dom;
   }
+
 
   updateDOM(): boolean {
     return false;

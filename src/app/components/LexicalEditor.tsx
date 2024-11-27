@@ -62,23 +62,15 @@ function LexicalEditorComponent({ initialState, onChange, tabId }: LexicalEditor
 
   const editorConfig = useMemo(() => ({
     namespace: `PaperCutEditor-${tabId}`,
-    onError: (error: Error) => {
-      console.error('Lexical Editor Error:', error);
-    },
+    onError: (error: Error) => console.error(error),
     editorState: initialState,
     nodes: [
       PaperCutWordNode,
       PaperCutSpeakerNode,
-      PaperCutSegmentNode,
-      {
-        replace: TextNode,
-        with: (node: TextNode) => new PaperCutWordNode(node.getTextContent(), 0, 0, '', '', '', 0),
-      },
-    ],
-    theme: {
-      // Add theme if needed
-    },
+      PaperCutSegmentNode
+    ]
   }), [initialState, tabId]);
+
 
   return (
     <LexicalComposer initialConfig={editorConfig}>
@@ -88,7 +80,7 @@ function LexicalEditorComponent({ initialState, onChange, tabId }: LexicalEditor
         <RichTextPlugin
           contentEditable={
             <ContentEditable 
-              className="editor-input min-h-[200px] p-4 outline-none" 
+    className="editor-input prose max-w-none min-h-[200px] p-4 outline-none"
               spellCheck={false}
               data-gramm="false"
               data-gramm_editor="false"

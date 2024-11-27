@@ -911,20 +911,41 @@ i.justify-align {
   border: 2px dashed #ccc;
 }
 
-.papercut-speaker {
-  font-weight: bold;
-  margin-top: 1em;
-}
-
 .papercut-segment {
-  margin-left: 1em;
+  margin: 8px 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
+.timestamp-wrapper {
+  display: inline-block;
+  margin-right: 8px;
+  color: #666;
+  font-size: 14px;
+}
+
+.segment-timestamp {
+  font-family: Menlo, Monaco, "Courier New", monospace;
+}
+
+.speaker-wrapper {
+  display: inline-block;
+  margin-right: 8px;
+}
+
+.speaker-label {
+  font-weight: 600;
+  color: #000;
+}
 
 .papercut-word {
   display: inline-block;
-  cursor: pointer;
-  user-select: none;
+  margin-right: 4px;
+  font-size: 14px;
+}
+
+/* Add margin after each sentence or segment */
+.papercut-segment + .papercut-segment {
+  margin-top: 24px;
 }
 
 .papercut-word:hover {

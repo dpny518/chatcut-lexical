@@ -71,6 +71,21 @@ export class PaperCutSegmentNode extends ElementNode {
   createDOM(): HTMLElement {
     const dom = document.createElement('div');
     dom.classList.add('papercut-segment');
+    
+    const timestampWrapper = document.createElement('div');
+    timestampWrapper.classList.add('timestamp-wrapper');
+    
+    const timestamp = document.createElement('span');
+    timestamp.classList.add('segment-timestamp');
+    // Format timestamp [0:01] style
+    const time = this.__startTime;
+    const minutes = Math.floor(time / 60);
+    const seconds = Math.floor(time % 60);
+    timestamp.textContent = `[${minutes}:${String(seconds).padStart(2, '0')}]`;
+    
+    timestampWrapper.appendChild(timestamp);
+    dom.appendChild(timestampWrapper);
+    
     return dom;
   }
 

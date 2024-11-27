@@ -7,10 +7,12 @@ import { FormattedWordsProvider } from "@/app/contexts/FormattedWordsContext";
 
 export default function CenterPanel() {
   return (
-    <main className="flex-1 h-full bg-muted/50 text-foreground border-r border-border overflow-auto">
-      <FormattedWordsProvider>
-        <Editor />
-      </FormattedWordsProvider>
+    <main className="flex-1 h-full bg-muted/50 text-foreground overflow-auto">
+      <div className="max-w-3xl mx-auto w-full p-4"> {/* Adjusted padding */}
+        <FormattedWordsProvider>
+          <Editor />
+        </FormattedWordsProvider>
+      </div>
     </main>
   );
 }

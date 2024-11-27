@@ -5,14 +5,12 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 
 const RightPanel: React.FC = () => {
   return (
-    <Card className="h-full border-l border-border flex flex-col">
-      <CardHeader className="border-b flex-shrink-0 py-3">
-        <CardTitle className="text-lg">PaperCut Panel</CardTitle>
+    <Card className="h-full border-none rounded-none flex flex-col">
+      <CardHeader className="border-b flex-shrink-0 py-3 px-4">
+        <CardTitle className="text-lg font-medium">PaperCut Panel</CardTitle>
       </CardHeader>
-      <CardContent className="flex-grow overflow-auto p-0">
-        <div className="p-4">
-          <PaperCutPanel />
-        </div>
+      <CardContent className="flex-grow overflow-auto p-4">
+        <PaperCutPanel />
       </CardContent>
     </Card>
   );
