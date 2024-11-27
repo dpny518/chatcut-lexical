@@ -15,7 +15,7 @@ import { PaperCutSegmentNode } from '@/app/nodes/PaperCutSegmentNode';
 import { CopyPastePlugin } from '@/app/plugins/CopyPastePlugin';
 import { WordHoverPlugin } from '@/app/plugins/WordHoverPlugin';
 import { EditRestrictionPlugin } from '@/app/plugins/EditRestrictionPlugin';
-import ToolbarPlugin from '@/app/plugins/ToolbarPlugin';
+import PaperCutToolbarPlugin from '@/app/plugins/PaperCutToolbarPlugin';
 import { useEditors } from '@/app/contexts/EditorContext';
 
 interface LexicalEditorProps {
@@ -73,7 +73,7 @@ function LexicalEditorComponent({ initialState, onChange, tabId }: LexicalEditor
     <LexicalComposer initialConfig={editorConfig}>
       <div className="editor-container relative">
         <AutoFocus />
-        <ToolbarPlugin />
+        <PaperCutToolbarPlugin />
         <RichTextPlugin
           contentEditable={
             <ContentEditable 

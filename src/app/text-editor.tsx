@@ -34,20 +34,30 @@ import { Badge } from "@/components/ui/badge";
 function Placeholder() {
     return <div className="editor-placeholder">Upload and Select Some Transcripts.</div>;
 }
-interface CurrentFileIndicatorProps {
-    currentFile: string | null;
+
+  interface CurrentFileIndicatorProps {
+    selectedFileIds: string[];
+    files: Record<string, { name: string }>;
   }
-  
-  function CurrentFileIndicator({ currentFile }: CurrentFileIndicatorProps) {
-    return (
-      <div className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50 flex items-center gap-2 border-b px-4 py-2">
-        <FileIcon className="h-4 w-4 text-muted-foreground" />
-        <Badge variant="secondary" className="font-mono text-xs">
-          {currentFile || 'No file selected'}
-        </Badge>
-      </div>
-    );
-  }
+
+function CurrentFileIndicator({ selectedFileIds, files }: CurrentFileIndicatorProps) {
+  const getDisplayText = () => {
+    if (selectedFileIds.length === 0) return 'No file selected';
+    if (selectedFileIds.length === 1) {
+      return files[selectedFileIds[0]]?.name || 'Unknown File';
+    }
+    return 'Multiple Selection';
+  };
+
+  return (
+    <div className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50 flex items-center gap-2 border-b px-4 py-2">
+      <FileIcon className="h-4 w-4 text-muted-foreground" />
+      <Badge variant="secondary" className="font-mono text-xs">
+        {getDisplayText()}
+      </Badge>
+    </div>
+  );
+}
 
 const editorConfig = {
     theme: ExampleTheme,
@@ -108,11 +118,6 @@ export function Editor(): JSX.Element | null {
     const { selectedFileIds } = useEditorContent();
     const { files } = useFileSystem();
 
-    useEffect(() => {
-        setIsMounted(true);
-        console.log("Editor: Component mounted");
-    }, []);
-
     const getFileNameFromId = useCallback((fileId: string): string => {
         const file = files[fileId];
         return file ? file.name : 'Unknown File';
@@ -139,6 +144,11 @@ export function Editor(): JSX.Element | null {
     }, [getFileNameFromId, selectedFileIds]);
 
     useEffect(() => {
+        setIsMounted(true);
+        console.log("Editor: Component mounted");
+    }, []);
+
+    useEffect(() => {
         if (selectedFileIds.length > 0) {
             const editor = (window as any).lexicalEditor as LexicalEditor;
             if (editor) {
@@ -151,12 +161,11 @@ export function Editor(): JSX.Element | null {
 
     if (!isMounted) return null;
 
-    console.log("Editor: Rendering component");
     return (
         <LexicalComposer initialConfig={editorConfig}>
             <div className="editor-container flex flex-col">
                 <ToolbarPlugin />
-                <CurrentFileIndicator currentFile={currentFile} />
+                <CurrentFileIndicator selectedFileIds={selectedFileIds} files={files} />
                 <div className="editor-inner flex-grow overflow-auto">
                     <RichTextPlugin
                         contentEditable={<ContentEditable className="editor-input min-h-[500px] p-4" />}
@@ -166,7 +175,6 @@ export function Editor(): JSX.Element | null {
                     <HistoryPlugin />
                     <TabIndentationPlugin />
                     <FormattedWordsPlugin />
-                    <OnChangePlugin onChange={updateCurrentFile} />
                     <EditorContent />
                 </div>
             </div>
