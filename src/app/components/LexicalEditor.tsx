@@ -17,6 +17,7 @@ import { WordHoverPlugin } from '@/app/plugins/WordHoverPlugin';
 import { EditRestrictionPlugin } from '@/app/plugins/EditRestrictionPlugin';
 import PaperCutToolbarPlugin from '@/app/plugins/PaperCutToolbarPlugin';
 import { useEditors } from '@/app/contexts/EditorContext';
+import { ClearEditorPlugin } from '@/app/plugins/ClearEditorPlugin';
 
 interface LexicalEditorProps {
   initialState: string | null;
@@ -93,6 +94,7 @@ function LexicalEditorComponent({ initialState, onChange, tabId }: LexicalEditor
         <OnChangePlugin onChange={handleChange} />
         <WordHoverPlugin />
         <EditRestrictionPlugin />
+        <ClearEditorPlugin />
         <RegisterEditorPlugin onEditorCreated={handleEditorCreation} />
       </div>
     </LexicalComposer>
