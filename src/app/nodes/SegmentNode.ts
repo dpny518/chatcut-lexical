@@ -1,4 +1,3 @@
-// SegmentNode.ts
 import { ElementNode, NodeKey, LexicalNode, SerializedElementNode } from 'lexical';
 import { $createTextNode } from 'lexical';
 
@@ -48,13 +47,53 @@ export class SegmentNode extends ElementNode {
     this.__fileId = fileId;
   }
 
-  // ... getter and setter methods for all properties
+  // Add getter methods
+  getStartTime(): number {
+    return this.__startTime;
+  }
+
+  getEndTime(): number {
+    return this.__endTime;
+  }
+
+  getSegmentId(): string {
+    return this.__segmentId;
+  }
+
+  getSpeaker(): string {
+    return this.__speaker;
+  }
+
+  getFileId(): string {
+    return this.__fileId;
+  }
+
+  // Add setter methods
+  setStartTime(startTime: number): void {
+    this.getWritable().__startTime = startTime;
+  }
+
+  setEndTime(endTime: number): void {
+    this.getWritable().__endTime = endTime;
+  }
+
+  setSegmentId(segmentId: string): void {
+    this.getWritable().__segmentId = segmentId;
+  }
+
+  setSpeaker(speaker: string): void {
+    this.getWritable().__speaker = speaker;
+  }
+
+  setFileId(fileId: string): void {
+    this.getWritable().__fileId = fileId;
+  }
 
   createDOM(): HTMLElement {
     const dom = document.createElement('span');
     dom.classList.add('segment');
     return dom;
-}
+  }
 
   updateDOM(): boolean {
     return false;

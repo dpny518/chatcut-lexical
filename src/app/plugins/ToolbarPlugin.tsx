@@ -19,14 +19,14 @@ import {
   LexicalNode,
   TextFormatType
 } from "lexical";
-import { $isPaperCutWordNode, $createPaperCutWordNode, PaperCutWordNode } from '@/app/nodes/PaperCutWordNode';
-import { $isPaperCutSpeakerNode, $createPaperCutSpeakerNode, PaperCutSpeakerNode } from '@/app/nodes/PaperCutSpeakerNode';
-import { $isPaperCutSegmentNode, $createPaperCutSegmentNode, PaperCutSegmentNode } from '@/app/nodes/PaperCutSegmentNode';
+import { $isPaperCutWordNode, PaperCutWordNode } from '@/app/nodes/PaperCutWordNode';
+import { $isPaperCutSegmentNode } from '@/app/nodes/PaperCutSegmentNode';
 import { $getSelectionStyleValueForProperty, $patchStyleText } from "@lexical/selection";
 import { mergeRegister } from "@lexical/utils";
 import { useEditors } from '@/app/contexts/EditorContext';
-import PaperCutPastePlugin, { parseClipboardData, handlePaste, WordData } from '@/app/plugins/PaperCutPastePlugin';
-
+import { useFileSystem } from "@/app/contexts/FileSystemContext";
+import { WordData } from '@/app/utils/clipboard-utils';
+import { handlePaste } from '@/app/utils/editor-utils';
 
 interface DividerProps {
   className?: string;
@@ -98,7 +98,7 @@ export default function ToolbarPlugin() {
   const HIGHLIGHT_RED = '#FF6347';
   const FORMAT_GREEN_HIGHLIGHT = 'format_green_highlight';
   const FORMAT_RED_HIGHLIGHT = 'format_red_highlight';
-  
+  const { files } = useFileSystem();
   
     const updateToolbar = useCallback(() => {
     const selection = $getSelection();
@@ -177,18 +177,49 @@ export default function ToolbarPlugin() {
     
     if (wordNodes.length === 0) return false;
   
-    const selectedContent = wordNodes.map(node => ({
-      word: node.getTextContent(),
-      startTime: node.getStartTime(),
-      endTime: node.getEndTime(),
-      segmentId: node.getSegmentId(),
-      speaker: node.getSpeaker(),
-      fileId: node.getFileId(),
-      wordIndex: node.getWordIndex()
-    }));
+    const selectedWords = editor.getEditorState().read(() => {
+      return wordNodes.map(node => {
+        const segment = node.getParent();
+        if (!$isPaperCutSegmentNode(segment)) return null;
+        
+        return {
+          word: node.getTextContent(),
+          startTime: node.getStartTime(),
+          endTime: node.getEndTime(),
+          wordIndex: node.getWordIndex(),
+          segmentId: node.getSegmentId(),
+          segmentStartTime: segment.getStartTime(),
+          segmentEndTime: segment.getEndTime(),
+          speaker: node.getSpeaker(),
+          fileName: files[node.getFileId()]?.name || 'unknown',
+          fileId: node.getFileId()
+        };
+      }).filter(Boolean);
+    });
   
-    const clipboardData = selectedContent
-      .map(wordData => `${wordData.word}|${wordData.startTime}|${wordData.endTime}|${wordData.segmentId}|${wordData.speaker}|${wordData.fileId}|${wordData.wordIndex}`)
+    const clipboardData = selectedWords
+      .map(wordData => {
+        const wordInfo = [
+          wordData.word,
+          wordData.startTime,
+          wordData.endTime,
+          wordData.wordIndex
+        ].join(',');
+  
+        const segmentInfo = [
+          wordData.segmentId,
+          wordData.segmentStartTime,
+          wordData.segmentEndTime,
+          wordData.speaker
+        ].join(',');
+  
+        const fileInfo = [
+          wordData.fileName,
+          wordData.fileId
+        ].join(',');
+  
+        return [wordInfo, segmentInfo, fileInfo].join('|');
+      })
       .join(' ');
   
     const papercutEditor = getActivePaperCutEditor();
@@ -206,7 +237,7 @@ export default function ToolbarPlugin() {
       return true;
     }
     return false;
-  }, [getActivePaperCutEditor]);
+  }, [editor, getActivePaperCutEditor, files]);
   
   const handleInsertToPaperCut = useCallback((): boolean => {
     const selection = $getSelection();
@@ -217,18 +248,49 @@ export default function ToolbarPlugin() {
     
     if (wordNodes.length === 0) return false;
   
-    const selectedContent = wordNodes.map(node => ({
-      word: node.getTextContent(),
-      startTime: node.getStartTime(),
-      endTime: node.getEndTime(),
-      segmentId: node.getSegmentId(),
-      speaker: node.getSpeaker(),
-      fileId: node.getFileId(),
-      wordIndex: node.getWordIndex()
-    }));
+    const selectedWords = editor.getEditorState().read(() => {
+      return wordNodes.map(node => {
+        const segment = node.getParent();
+        if (!$isPaperCutSegmentNode(segment)) return null;
+        
+        return {
+          word: node.getTextContent(),
+          startTime: node.getStartTime(),
+          endTime: node.getEndTime(),
+          wordIndex: node.getWordIndex(),
+          segmentId: node.getSegmentId(),
+          segmentStartTime: segment.getStartTime(),
+          segmentEndTime: segment.getEndTime(),
+          speaker: node.getSpeaker(),
+          fileName: files[node.getFileId()]?.name || 'unknown',
+          fileId: node.getFileId()
+        };
+      }).filter(Boolean);
+    });
   
-    const clipboardData = selectedContent
-      .map(wordData => `${wordData.word}|${wordData.startTime}|${wordData.endTime}|${wordData.segmentId}|${wordData.speaker}|${wordData.fileId}|${wordData.wordIndex}`)
+    const clipboardData = selectedWords
+      .map(wordData => {
+        const wordInfo = [
+          wordData.word,
+          wordData.startTime,
+          wordData.endTime,
+          wordData.wordIndex
+        ].join(',');
+  
+        const segmentInfo = [
+          wordData.segmentId,
+          wordData.segmentStartTime,
+          wordData.segmentEndTime,
+          wordData.speaker
+        ].join(',');
+  
+        const fileInfo = [
+          wordData.fileName,
+          wordData.fileId
+        ].join(',');
+  
+        return [wordInfo, segmentInfo, fileInfo].join('|');
+      })
       .join(' ');
   
     const papercutEditor = getActivePaperCutEditor();
@@ -237,7 +299,7 @@ export default function ToolbarPlugin() {
       return true;
     }
     return false;
-  }, [getActivePaperCutEditor]);
+  }, [editor, getActivePaperCutEditor, files]);
 
   useEffect(() => {
     return mergeRegister(

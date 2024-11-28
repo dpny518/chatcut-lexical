@@ -11,10 +11,39 @@ import { $createSpeakerNode, $isSpeakerNode, SpeakerNode } from "./nodes/Speaker
 import { $createParagraphNode } from 'lexical';
 import { useEditorContent } from "@/app/contexts/EditorContentContext";
 
+
 function EditorContent() {
     const [editor] = useLexicalComposerContext();
     const { files } = useFileSystem();
     const { selectedFileIds, setSelectedFileIds } = useEditorContent();
+
+    const formatClipboardData = (node: WordNode, files: any, segment: SegmentNode) => {
+        const fileName = files[node.getFileId()]?.name || 'unknown';
+        
+        // Group the data into logical sections
+        const wordInfo = [
+            node.getTextContent(),           // word text
+            node.getStartTime(),             // word start time
+            node.getEndTime(),               // word end time
+            node.getWordIndex(),             // word position in segment
+        ].join(',');
+
+        const segmentInfo = [
+            node.getSegmentId(),             // segment id
+            segment.getStartTime(),          // segment start time
+            segment.getEndTime(),            // segment end time
+            node.getSpeaker(),               // speaker
+        ].join(',');
+
+        const fileInfo = [
+            fileName,                        // file name
+            node.getFileId(),                // file id
+        ].join(',');
+
+        // Join all sections with a pipe separator
+        return [wordInfo, segmentInfo, fileInfo].join('|');
+    };
+
 
     const handleDragStart = useCallback((event: DragEvent) => {
         editor.getEditorState().read(() => {
@@ -25,8 +54,11 @@ function EditorContent() {
             const dragData = nodes
                 .filter($isWordNode)
                 .map((node: WordNode) => {
-                    return `${node.getTextContent()}|${node.getStartTime()}|${node.getEndTime()}|${node.getSegmentId()}|${node.getSpeaker()}|${node.getFileId()}|${node.getWordIndex()}`;
+                    const segment = node.getParent();
+                    if (!$isSegmentNode(segment)) return '';
+                    return formatClipboardData(node, files, segment);
                 })
+                .filter(Boolean)
                 .join(' ');
 
             if (dragData) {
@@ -35,7 +67,8 @@ function EditorContent() {
                 console.log('Dragged content:', dragData);
             }
         });
-    }, [editor]);
+    }, [editor, files]);
+
 
     useEffect(() => {
         const rootElement = editor.getRootElement();
@@ -163,8 +196,11 @@ function EditorContent() {
                 const clipboardData = nodes
                     .filter($isWordNode)
                     .map((node: WordNode) => {
-                        return `${node.getTextContent()}|${node.getStartTime()}|${node.getEndTime()}|${node.getSegmentId()}|${node.getSpeaker()}|${node.getFileId()}|${node.getWordIndex()}`;
+                        const segment = node.getParent();
+                        if (!$isSegmentNode(segment)) return '';
+                        return formatClipboardData(node, files, segment);
                     })
+                    .filter(Boolean)
                     .join(' ');
 
                 if (clipboardData) {
@@ -174,13 +210,12 @@ function EditorContent() {
                     return true;
                 }
 
-                // If no WordNodes were found, prevent the default copy behavior
                 event.preventDefault();
                 return false;
             },
             COMMAND_PRIORITY_LOW
         );
-    }, [editor]);
+    }, [editor, files]);
 
     return null;
 }
