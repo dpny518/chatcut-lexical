@@ -17,10 +17,11 @@ import {
   EditorState,
   LexicalEditor,
   LexicalNode,
-  TextFormatType
+  TextFormatType,
+  ElementNode
 } from "lexical";
-import { $isPaperCutWordNode, PaperCutWordNode } from '@/app/nodes/PaperCutWordNode';
-import { $isPaperCutSegmentNode } from '@/app/nodes/PaperCutSegmentNode';
+import { $isWordNode, WordNode } from '@/app/nodes/WordNode';
+import { $isSegmentNode, SegmentNode } from '@/app/nodes/SegmentNode';
 import { $getSelectionStyleValueForProperty, $patchStyleText } from "@lexical/selection";
 import { mergeRegister } from "@lexical/utils";
 import { useEditors } from '@/app/contexts/EditorContext';
@@ -49,9 +50,6 @@ const INSERT_TO_PAPERCUT_COMMAND = createCommand<void>('INSERT_TO_PAPERCUT_COMMA
 
 function Divider({ className = "" }: DividerProps) {
   return <div className={`h-6 w-[1px] bg-border ${className}`} />;
-}
-function isWordNode(node: LexicalNode): node is PaperCutWordNode {
-  return node.getType() === 'word' || $isPaperCutWordNode(node);
 }
 
 const groupWordsBySegment = (words: WordData[]) => {
@@ -104,7 +102,7 @@ export default function ToolbarPlugin() {
     const selection = $getSelection();
     if ($isRangeSelection(selection)) {
       const nodes = selection.getNodes();
-      const hasWordNodes = nodes.some(isWordNode);
+      const hasWordNodes = nodes.some($isWordNode);
       const activePaperCutEditor = getActivePaperCutEditor();
       
       console.log('Updating toolbar:');
@@ -170,33 +168,46 @@ export default function ToolbarPlugin() {
 
   const handleAddToPaperCut = useCallback((): boolean => {
     const selection = $getSelection();
-    if (!$isRangeSelection(selection)) return false;
+    console.log('Selection:', selection);
+    if (!$isRangeSelection(selection)) {
+      console.log('Not a range selection');
+      return false;
+    }
   
     const nodes = selection.getNodes();
-    const wordNodes = nodes.filter(isWordNode);
+    console.log('All nodes:', nodes);
+    const wordNodes = nodes.filter($isWordNode);
+    console.log('Word nodes:', wordNodes);
     
     if (wordNodes.length === 0) return false;
   
     const selectedWords = editor.getEditorState().read(() => {
       return wordNodes.map(node => {
+        console.log('Processing node:', node);
         const segment = node.getParent();
-        if (!$isPaperCutSegmentNode(segment)) return null;
+        console.log('Parent segment:', segment);
+        if (!$isSegmentNode(segment)) {
+          console.log('Not a SegmentNode');
+          return undefined;
+        }
         
-        return {
+        const wordData = {
           word: node.getTextContent(),
           startTime: node.getStartTime(),
           endTime: node.getEndTime(),
           wordIndex: node.getWordIndex(),
-          segmentId: node.getSegmentId(),
+          segmentId: segment.getSegmentId(),
           segmentStartTime: segment.getStartTime(),
           segmentEndTime: segment.getEndTime(),
-          speaker: node.getSpeaker(),
+          speaker: segment.getSpeaker(),
           fileName: files[node.getFileId()]?.name || 'unknown',
           fileId: node.getFileId()
         };
-      }).filter(Boolean);
+        console.log('Word data:', wordData);
+        return wordData;
+      }).filter((word): word is NonNullable<typeof word> => word !== undefined);
     });
-  
+    
     const clipboardData = selectedWords
       .map(wordData => {
         const wordInfo = [
@@ -205,35 +216,32 @@ export default function ToolbarPlugin() {
           wordData.endTime,
           wordData.wordIndex
         ].join(',');
-  
+    
         const segmentInfo = [
           wordData.segmentId,
           wordData.segmentStartTime,
           wordData.segmentEndTime,
           wordData.speaker
         ].join(',');
-  
+    
         const fileInfo = [
           wordData.fileName,
           wordData.fileId
         ].join(',');
-  
-        return [wordInfo, segmentInfo, fileInfo].join('|');
+    
+        const dataString = [wordInfo, segmentInfo, fileInfo].join('|');
+        console.log('Data string for word:', dataString);
+        return dataString;
       })
       .join(' ');
-  
+    
+    console.log('Final clipboard data:', clipboardData);
     const papercutEditor = getActivePaperCutEditor();
+    console.log('Active PaperCut editor:', papercutEditor);
+    console.log('Clipboard data:', clipboardData);
     if (papercutEditor) {
-      papercutEditor.update(() => {
-        const root = $getRoot();
-        const lastChild = root.getLastChild();
-        if (lastChild) {
-          lastChild.selectEnd();
-        } else {
-          root.selectEnd();
-        }
-        handlePaste(clipboardData, papercutEditor);
-      });
+      // Pass true for appendToEnd
+      handlePaste(clipboardData, papercutEditor, files, true);
       return true;
     }
     return false;
@@ -244,28 +252,30 @@ export default function ToolbarPlugin() {
     if (!$isRangeSelection(selection)) return false;
   
     const nodes = selection.getNodes();
-    const wordNodes = nodes.filter(isWordNode);
+    const wordNodes = nodes.filter($isWordNode);
     
     if (wordNodes.length === 0) return false;
   
     const selectedWords = editor.getEditorState().read(() => {
       return wordNodes.map(node => {
         const segment = node.getParent();
-        if (!$isPaperCutSegmentNode(segment)) return null;
+        if (!$isSegmentNode(segment)) {
+          return undefined;
+        }
         
         return {
           word: node.getTextContent(),
           startTime: node.getStartTime(),
           endTime: node.getEndTime(),
           wordIndex: node.getWordIndex(),
-          segmentId: node.getSegmentId(),
+          segmentId: segment.getSegmentId(),
           segmentStartTime: segment.getStartTime(),
           segmentEndTime: segment.getEndTime(),
-          speaker: node.getSpeaker(),
+          speaker: segment.getSpeaker(),
           fileName: files[node.getFileId()]?.name || 'unknown',
           fileId: node.getFileId()
-        };
-      }).filter(Boolean);
+        } as const;
+      }).filter((word): word is NonNullable<typeof word> => word !== undefined);
     });
   
     const clipboardData = selectedWords
@@ -295,7 +305,7 @@ export default function ToolbarPlugin() {
   
     const papercutEditor = getActivePaperCutEditor();
     if (papercutEditor) {
-      handlePaste(clipboardData, papercutEditor);
+      handlePaste(clipboardData, papercutEditor, files, false);
       return true;
     }
     return false;

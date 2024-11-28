@@ -29,9 +29,10 @@ function PaperCutPastePlugin() {
 
   const handlePaste = useCallback((clipboardData: string): boolean => {
     if (!clipboardData) return false;
-    return handlePasteUtil(clipboardData, editor, files);
+    // Pass false for appendToEnd to maintain natural cursor-based insertion
+    return handlePasteUtil(clipboardData, editor, files, false);
   }, [editor, files]);
-
+  
   const handleDragStart = useCallback((event: DragEvent): boolean => {
     editor.getEditorState().read(() => {
       const selection = $getSelection();
