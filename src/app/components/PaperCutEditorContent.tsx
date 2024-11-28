@@ -5,6 +5,8 @@ import {
   $getSelection, 
   $isRangeSelection, 
   $createTextNode, 
+  $isElementNode,
+  ElementNode,
   PASTE_COMMAND, 
   COPY_COMMAND, 
   COMMAND_PRIORITY_LOW 
@@ -37,31 +39,41 @@ interface WordData {
 function PaperCutEditorContent() {
   const [editor] = useLexicalComposerContext();
 
-  const getAllWordNodes = () => {
+
+  const extractWordData = (node: PaperCutWordNode): WordData => ({
+    word: node.getTextContent(),
+    startTime: node.getStartTime(),
+    endTime: node.getEndTime(),
+    segmentId: node.getSegmentId(),
+    speaker: node.getSpeaker(),
+    fileId: node.getFileId(),
+    wordIndex: node.getWordIndex(),
+  });
+  
+  const getAllWordNodes = (): WordData[] => {
     const root = $getRoot();
     const wordNodes: WordData[] = [];
-    
-    root.getChildren().forEach(node => {
-      if ($isPaperCutSegmentNode(node)) {
-        node.getChildren().forEach(child => {
+  
+    root.getChildren().forEach(rootNodeChild => {
+      if ($isPaperCutSegmentNode(rootNodeChild)) {
+        rootNodeChild.getChildren().forEach(child => {
           if ($isPaperCutWordNode(child)) {
-            wordNodes.push({
-              word: child.getTextContent(),
-              startTime: child.getStartTime(),
-              endTime: child.getEndTime(),
-              segmentId: child.getSegmentId(),
-              speaker: child.getSpeaker(),
-              fileId: child.getFileId(),
-              wordIndex: child.getWordIndex()
-            });
+            wordNodes.push(extractWordData(child));
+          }
+        });
+      } else if ($isElementNode(rootNodeChild)) {
+        const elementNode = rootNodeChild as ElementNode;
+        elementNode.getChildren().forEach(grandChild => {
+          if ($isPaperCutWordNode(grandChild)) {
+            wordNodes.push(extractWordData(grandChild));
           }
         });
       }
     });
-    
+  
     return wordNodes;
   };
-
+  
   const groupWordsBySegmentAndSpeaker = (words: WordData[]): WordData[][] => {
     const groups: WordData[][] = [];
     let currentGroup: WordData[] = [];
@@ -367,6 +379,7 @@ const handlePaste = useCallback((event: ClipboardEvent): boolean => {
   }, [editor, handlePaste]);
 
   return null;
+ 
 }
 
 function formatTime(seconds: number): string {
