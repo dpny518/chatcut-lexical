@@ -937,6 +937,12 @@ i.justify-align {
   color: #000;
 }
 
+.tabs-trigger-active {
+  font-weight: bold;
+  border-bottom: 2px solid var(--accent-color);
+}
+
+
 .papercut-word {
   display: inline-block;
   margin-right: 4px;
