@@ -1,4 +1,4 @@
-import { ElementNode, NodeKey, SerializedElementNode } from 'lexical';
+import { ElementNode, NodeKey, SerializedElementNode, $getSelection} from 'lexical';
 
 export type SerializedPaperCutSegmentNode = SerializedElementNode & {
   startTime: number;
@@ -79,13 +79,54 @@ export class PaperCutSegmentNode extends ElementNode {
   }
 
   createDOM(): HTMLElement {
-    const dom = document.createElement('div');
-    dom.classList.add('papercut-segment');
-    return dom;
+    const container = document.createElement('div');
+    container.className = 'PaperCutSegmentNode';
+    container.setAttribute('data-segment', this.__key);
+    
+    // Create a wrapper for the content to maintain proper alignment
+    const contentWrapper = document.createElement('div');
+    contentWrapper.className = 'segment-content';
+    container.appendChild(contentWrapper);
+    
+    return container;
+  }
+  updateDOM(prevNode: PaperCutSegmentNode, dom: HTMLElement): boolean {
+    // Update any attributes that might affect dragging
+    if (prevNode.__speaker !== this.__speaker) {
+      dom.dataset.speaker = this.__speaker;
+      return true;
+    }
+    return false;
   }
 
-  updateDOM(): boolean {
-    return false;
+  // Add methods required for dragging
+  canInsertAfter(node: ElementNode): boolean {
+    return true;
+  }
+
+  canReplaceWith(replacement: ElementNode): boolean {
+    return replacement instanceof PaperCutSegmentNode;
+  }
+
+  canMergeWith(node: ElementNode): boolean {
+    return false; // Typically segments shouldn't merge
+  }
+
+  // Implement insertNewAfter for drag and drop support
+  insertNewAfter(): ElementNode | null {
+    const newElement = $createPaperCutSegmentNode(
+      this.__startTime,
+      this.__endTime,
+      this.__segmentId,
+      this.__speaker,
+      this.__fileId
+    );
+    
+    const selection = $getSelection();
+    if (selection) {
+      selection.insertNodes([newElement]);
+    }
+    return newElement;
   }
 
   exportJSON(): SerializedPaperCutSegmentNode {

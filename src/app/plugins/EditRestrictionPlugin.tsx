@@ -27,7 +27,10 @@ export function EditRestrictionPlugin() {
           if (!$isRangeSelection(selection)) {
             return false;
           }
-
+          // Allow operations on segment nodes
+          if (selection.getNodes().some($isPaperCutSegmentNode)) {
+            return false;
+          }
           // Allow deletion of entire selections
           if (!selection.isCollapsed()) {
             const nodes = selection.getNodes();
@@ -64,7 +67,10 @@ export function EditRestrictionPlugin() {
           if (!$isRangeSelection(selection)) {
             return false;
           }
-
+          // Allow operations on segment nodes
+          if (selection.getNodes().some($isPaperCutSegmentNode)) {
+            return false;
+          }
           // Allow deletion of entire selections
           if (!selection.isCollapsed()) {
             const nodes = selection.getNodes();

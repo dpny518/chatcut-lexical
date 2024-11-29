@@ -34,6 +34,11 @@ function PaperCutPastePlugin() {
   }, [editor, files]);
   
   const handleDragStart = useCallback((event: DragEvent): boolean => {
+      // Ignore if drag started from drag handle
+      const target = event.target as Element;
+      if (target && target.closest?.('.draggable-block-menu')) {
+        return false;
+      }
     editor.getEditorState().read(() => {
       const selection = $getSelection();
       if (!$isRangeSelection(selection)) return false;
@@ -61,6 +66,10 @@ function PaperCutPastePlugin() {
   }, [editor, files]);
 
   const handleDrop = useCallback((event: DragEvent): boolean => {
+    const target = event.target as Element;
+    if (target && target.closest?.('.draggable-block-menu')) {
+      return false;
+    }
     event.preventDefault();
     const droppedText = event.dataTransfer?.getData('text/plain');
     

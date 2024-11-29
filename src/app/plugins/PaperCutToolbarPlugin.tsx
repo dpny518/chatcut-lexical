@@ -18,7 +18,7 @@ import { mergeRegister } from '@lexical/utils';
 import { $createPaperCutSpeakerNode, $isPaperCutSpeakerNode } from '@/app/nodes/PaperCutSpeakerNode';
 import { $isPaperCutWordNode } from '@/app/nodes/PaperCutWordNode';
 import { Undo, Redo, RefreshCw, Trash2 } from 'lucide-react';
-
+import '@/app/plugins/toolbar.css'; 
 // Create a custom command for clearing
 export const PAPERCUT_CLEAR_COMMAND = createCommand('PAPERCUT_CLEAR_COMMAND');
 

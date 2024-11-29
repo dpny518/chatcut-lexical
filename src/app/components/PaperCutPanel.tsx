@@ -36,17 +36,13 @@ export function PaperCutPanel() {
     closeTab
   } = usePaperCut();
 
-  // Add this state to force re-render
   const [editorKey, setEditorKey] = useState(0);
+  const openTabs = getTabs().filter(tab => tab.type === 'file' && tab.active);
 
-  // Modify setActiveTab to force re-render
   const handleSetActiveTab = useCallback((id: string) => {
     setActiveTab(id);
     setEditorKey(prev => prev + 1);
   }, [setActiveTab]);
-
-  // Only get tabs that are currently active/open
-  const openTabs = getTabs().filter(tab => tab.type === 'file' && tab.active);
 
   const handleCloseTab = (e: React.MouseEvent, tabId: string) => {
     e.preventDefault();
@@ -56,13 +52,15 @@ export function PaperCutPanel() {
 
   return (
     <div className="w-full h-full flex flex-col">
-      <div className="mb-4">
-        <Button onClick={() => createTab()} variant="outline">Create New PaperCut</Button>
-      </div>
-
       {(!activeTabId || openTabs.length === 0) ? (
         <div className="flex-grow flex justify-center items-center">
-          <p>Click 'Create New PaperCut' to get started.</p>
+          <Button 
+            onClick={() => createTab()} 
+            variant="outline" 
+            className="text-lg px-8 py-6"
+          >
+            Create New PaperCut
+          </Button>
         </div>
       ) : (
         <Tabs value={activeTabId} onValueChange={handleSetActiveTab} className="w-full">
@@ -82,29 +80,30 @@ export function PaperCutPanel() {
                 </div>
               ))}
             </TabsList>
-            <Button onClick={() => createTab()} variant="outline">Add Tab</Button>
+            <Button onClick={() => createTab()} variant="outline" size="sm">
+              Add Tab
+            </Button>
           </div>
+          
           {openTabs.map(tab => (
-            <TabsContent key={tab.id} value={tab.id}>
-              <Card>
-                <CardHeader>
-                  <CardTitle>
-                    <Input
-                      value={tab.name}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
-                        updateTabName(tab.id, e.target.value)
-                      }
-                      className="font-bold text-lg"
-                    />
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <LexicalEditor
-                    key={`${tab.id}-${editorKey}`}
-                    initialState={tab.editorState}
-                    onChange={(newState) => updateTabContent(tab.id, newState)}
-                    tabId={tab.id}
+            <TabsContent key={tab.id} value={tab.id} className="overflow-visible">
+              <Card className="overflow-visible shadow-sm">
+                <CardHeader className="pb-2">
+                  <Input
+                    value={tab.name}
+                    onChange={(e) => updateTabName(tab.id, e.target.value)}
+                    className="font-bold text-lg border-none px-0 focus-visible:ring-0"
                   />
+                </CardHeader>
+                <CardContent className="overflow-visible relative pt-0">
+                  <div className="relative">
+                    <LexicalEditor
+                      key={`${tab.id}-${editorKey}`}
+                      initialState={tab.editorState}
+                      onChange={(newState) => updateTabContent(tab.id, newState)}
+                      tabId={tab.id}
+                    />
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>

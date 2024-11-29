@@ -1,5 +1,5 @@
 'use client';
-
+import { Bold, Italic, Underline, Strikethrough, Undo, Redo } from 'lucide-react';
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -28,7 +28,7 @@ import { useEditors } from '@/app/contexts/EditorContext';
 import { useFileSystem } from "@/app/contexts/FileSystemContext";
 import { WordData } from '@/app/utils/clipboard-utils';
 import { handlePaste } from '@/app/utils/editor-utils';
-
+import '@/app/plugins/toolbar.css'; 
 interface DividerProps {
   className?: string;
 }
@@ -376,61 +376,69 @@ export default function ToolbarPlugin() {
   return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
 }
   return (
-        <div className="toolbar flex items-center gap-1 p-2 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60" ref={toolbarRef}>
-          <div className="flex items-center gap-1 mr-2">
-            <button
-              disabled={!canUndo}
-              onClick={() => editor.dispatchCommand(UNDO_COMMAND, undefined)}
-              className="toolbar-item h-8 w-8 inline-flex items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground disabled:opacity-50"
-              aria-label="Undo"
-            >
-              <i className="format undo" />
-            </button>
-            <button
-              disabled={!canRedo}
-              onClick={() => editor.dispatchCommand(REDO_COMMAND, undefined)}
-              className="toolbar-item h-8 w-8 inline-flex items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground disabled:opacity-50"
-              aria-label="Redo"
-            >
-              <i className="format redo" />
-            </button>
-          </div>
+    <div className="toolbar flex items-center gap-1 p-2 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60" ref={toolbarRef}>
+    <div className="flex items-center gap-1 mr-2">
+      <button
+        disabled={!canUndo}
+        onClick={() => editor.dispatchCommand(UNDO_COMMAND, undefined)}
+        className="toolbar-item h-8 w-8 inline-flex items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground disabled:opacity-50"
+        aria-label="Undo"
+      >
+        <Undo size={18} />
+      </button>
+      <button
+        disabled={!canRedo}
+        onClick={() => editor.dispatchCommand(REDO_COMMAND, undefined)}
+        className="toolbar-item h-8 w-8 inline-flex items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground disabled:opacity-50"
+        aria-label="Redo"
+      >
+        <Redo size={18} />
+      </button>
+    </div>
   
       <Divider className="h-6 w-[1px] bg-border" />
   
       <div className="flex items-center gap-1 mx-2">
-        <button
-          onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, "bold")}
-          className={`toolbar-item h-8 w-8 inline-flex items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground 
-            ${isBold ? "bg-accent text-accent-foreground" : ""}`}
-          aria-label="Format Bold"
-        >
-          <i className="format bold" />
-        </button>
-        <button
-          onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, "italic")}
-          className={`toolbar-item h-8 w-8 inline-flex items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground
-            ${isItalic ? "bg-accent text-accent-foreground" : ""}`}
-          aria-label="Format Italics"
-        >
-          <i className="format italic" />
-        </button>
-        <button
-          onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, "underline")}
-          className={`toolbar-item h-8 w-8 inline-flex items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground
-            ${isUnderline ? "bg-accent text-accent-foreground" : ""}`}
-          aria-label="Format Underline"
-        >
-          <i className="format underline" />
-        </button>
-        <button
-          onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, "strikethrough")}
-          className={`toolbar-item h-8 w-8 inline-flex items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground
-            ${isStrikethrough ? "bg-accent text-accent-foreground" : ""}`}
-          aria-label="Format Strikethrough"
-        >
-          <i className="format strikethrough" />
-        </button>
+      <button
+  onClick={() => {
+    editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'bold');
+  }}
+  className="toolbar-item h-8 w-8 inline-flex items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground"
+  aria-label="Format Bold"
+>
+  <Bold className="h-4 w-4" />
+</button>
+
+<button
+  onClick={() => {
+    editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'italic');
+  }}
+  className="toolbar-item h-8 w-8 inline-flex items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground"
+  aria-label="Format Italic"
+>
+  <Italic className="h-4 w-4" />
+</button>
+
+<button
+  onClick={() => {
+    editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'underline');
+  }}
+  className="toolbar-item h-8 w-8 inline-flex items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground"
+  aria-label="Format Underline"
+>
+  <Underline className="h-4 w-4" />
+</button>
+
+<button
+  onClick={() => {
+    editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'strikethrough');
+  }}
+  className="toolbar-item h-8 w-8 inline-flex items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground"
+  aria-label="Format Strikethrough"
+>
+  <Strikethrough className="h-4 w-4" />
+</button>
+
       </div>
   
       <Divider className="h-6 w-[1px] bg-border" />

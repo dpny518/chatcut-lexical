@@ -30,6 +30,7 @@ import { useFileSystem } from "@/app/contexts/FileSystemContext";
 
 import { FileIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Undo, Redo, RefreshCw, Trash2 } from 'lucide-react';
 
 function Placeholder() {
     return <div className="editor-placeholder">Upload and Select Some Transcripts.</div>;

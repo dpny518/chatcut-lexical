@@ -18,7 +18,7 @@ import PaperCutToolbarPlugin from '@/app/plugins/PaperCutToolbarPlugin';
 import { useEditors } from '@/app/contexts/EditorContext';
 import { ClearEditorPlugin } from '@/app/plugins/ClearEditorPlugin';
 import PaperCutEditorContent from './PaperCutEditorContent';
-
+import {PaperCutDraggablePlugin} from '@/app/plugins/PaperCutDraggableBlockPlugin';
 import { TextNode } from 'lexical';
 
 interface LexicalEditorProps {
@@ -38,6 +38,7 @@ function AutoFocus() {
 function LexicalEditorComponent({ initialState, onChange, tabId }: LexicalEditorProps) {
   const { registerPaperCutEditor, unregisterPaperCutEditor } = useEditors();
   const editorRef = useRef<LexicalEditorType | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null); // Add this ref for the container
 
   const handleChange = useCallback((editorState: EditorState) => {
     onChange(JSON.stringify(editorState));
@@ -74,13 +75,13 @@ function LexicalEditorComponent({ initialState, onChange, tabId }: LexicalEditor
 
   return (
     <LexicalComposer initialConfig={editorConfig}>
-      <div className="editor-container relative">
+      <div ref={containerRef} className="editor-container relative px-8">
         <AutoFocus />
-        <PaperCutToolbarPlugin />
+        {initialState && <PaperCutToolbarPlugin />}
         <RichTextPlugin
           contentEditable={
             <ContentEditable 
-              className="editor-input prose max-w-none min-h-[200px] p-4 outline-none"
+              className="editor-input prose max-w-none min-h-[200px] p-4 outline-none relative"
               spellCheck={false}
               data-gramm="false"
               data-gramm_editor="false"
@@ -88,7 +89,11 @@ function LexicalEditorComponent({ initialState, onChange, tabId }: LexicalEditor
               suppressContentEditableWarning
             />
           }
-          placeholder={<div className="editor-placeholder">Paste transcript content here...</div>}
+          placeholder={
+            <div className="editor-placeholder absolute top-4 left-4 text-gray-400 select-none pointer-events-none">
+              Paste transcript content here...
+            </div>
+          }
           ErrorBoundary={LexicalErrorBoundary}
         />
         <HistoryPlugin />
@@ -97,6 +102,7 @@ function LexicalEditorComponent({ initialState, onChange, tabId }: LexicalEditor
         <EditRestrictionPlugin />
         <ClearEditorPlugin />
         <PaperCutEditorContent />
+        <PaperCutDraggablePlugin anchorElem={containerRef.current || document.body} /> {/* Pass the container ref */}
         <RegisterEditorPlugin onEditorCreated={handleEditorCreation} />
       </div>
     </LexicalComposer>
