@@ -1,0 +1,44 @@
+.PaperCutSegmentNode {
+  position: relative;
+  padding-left: 40px;
+  margin: 4px 0;
+}
+
+.segment-content {
+  position: relative;
+  min-height: 24px; /* Match the height of your drag handle */
+}
+
+.draggable-block-menu {
+  position: absolute;
+  left: 8px;
+  top: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: grab;
+  color: #999;
+  opacity: 0;
+  transition: opacity 0.2s;
+  z-index: 10;
+}
+
+[data-lexical-editor] div[draggable="true"]:hover .draggable-block-menu {
+  opacity: 1;
+}
+
+.draggable-block-target-line {
+  pointer-events: none;
+  background: #0ea5e9;
+  height: 3px;
+  position: absolute;
+  left: 0;
+  right: 0;
+  opacity: 0;
+  transform: translateY(-50%);
+  z-index: 60;
+  border-radius: 2px;
+  box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.2);
+}
