@@ -1,19 +1,42 @@
 import { DraggableBlockPlugin_EXPERIMENTAL } from '@lexical/react/LexicalDraggableBlockPlugin';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
-import { useRef, FC } from 'react';
-import '@/app/plugins/draggableBlock.css'; 
+import { useRef, FC, useState, useEffect } from 'react';
+import '@/app/plugins/draggableBlock.css';
 
 export const PaperCutDraggablePlugin: FC<{
   anchorElem?: HTMLElement;
-}> = ({
-  anchorElem = document.body,
-}) => {
+}> = ({ anchorElem = document.body }) => {
   const menuRef = useRef<HTMLDivElement>(null);
   const targetLineRef = useRef<HTMLDivElement>(null);
 
   const isOnMenu = (element: HTMLElement): boolean => {
     return !!element.closest('.draggable-block-menu');
   };
+
+  const handleDragOver = (event: Event) => {
+    if (!targetLineRef.current) return;
+    
+    const dragEvent = event as DragEvent; // Type assertion
+    const editorElement = anchorElem.querySelector('[data-lexical-editor]');
+    if (!editorElement) return;
+
+    const editorRect = editorElement.getBoundingClientRect();
+    
+    // Ensure the line stays within the editor bounds
+    targetLineRef.current.style.left = `${editorRect.left}px`;
+    targetLineRef.current.style.width = `${editorRect.width}px`;
+    targetLineRef.current.style.top = `${dragEvent.clientY}px`;
+  };
+
+  useEffect(() => {
+    const editor = anchorElem.querySelector('[data-lexical-editor]');
+    if (editor) {
+      editor.addEventListener('dragover', handleDragOver);
+      return () => {
+        editor.removeEventListener('dragover', handleDragOver);
+      };
+    }
+  }, [anchorElem]);
 
   return (
     <DraggableBlockPlugin_EXPERIMENTAL

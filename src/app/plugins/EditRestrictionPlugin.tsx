@@ -27,34 +27,41 @@ export function EditRestrictionPlugin() {
           if (!$isRangeSelection(selection)) {
             return false;
           }
+
           // Allow operations on segment nodes
           if (selection.getNodes().some($isPaperCutSegmentNode)) {
             return false;
           }
-          // Allow deletion of entire selections
+
           if (!selection.isCollapsed()) {
             const nodes = selection.getNodes();
-            const allWordNodesOrParagraphs = nodes.every(
-              node => $isPaperCutWordNode(node) || $isParagraphNode(node) || $isTextNode(node)
-            );
-            // Only allow if all nodes are word nodes or paragraphs
-            return !allWordNodesOrParagraphs;
+            // If any selected node is a word node, select and delete the entire word(s)
+            if (nodes.some($isPaperCutWordNode)) {
+              editor.update(() => {
+                nodes.forEach(node => {
+                  if ($isPaperCutWordNode(node)) {
+                    node.selectNext();
+                    node.remove();
+                  }
+                });
+              });
+              return true;
+            }
+            return false;
           }
 
-          // Get the node before the selection
           const anchor = selection.anchor;
           const anchorNode = anchor.getNode();
           
           if ($isPaperCutWordNode(anchorNode)) {
-            // If we're at the start of a word node, allow deletion to remove the whole word
-            if (anchor.offset === 0) {
-              return false;
-            }
-            // Otherwise prevent character deletion within the word
+            // For backspace, always delete the entire word
+            editor.update(() => {
+              anchorNode.selectNext();
+              anchorNode.remove();
+            });
             return true;
           }
 
-          // Allow deletion if we're not in a word node
           return false;
         },
         COMMAND_PRIORITY_CRITICAL,
@@ -67,34 +74,41 @@ export function EditRestrictionPlugin() {
           if (!$isRangeSelection(selection)) {
             return false;
           }
+
           // Allow operations on segment nodes
           if (selection.getNodes().some($isPaperCutSegmentNode)) {
             return false;
           }
-          // Allow deletion of entire selections
+
           if (!selection.isCollapsed()) {
             const nodes = selection.getNodes();
-            const allWordNodesOrParagraphs = nodes.every(
-              node => $isPaperCutWordNode(node) || $isParagraphNode(node) || $isTextNode(node)
-            );
-            // Only allow if all nodes are word nodes or paragraphs
-            return !allWordNodesOrParagraphs;
+            // If any selected node is a word node, select and delete the entire word(s)
+            if (nodes.some($isPaperCutWordNode)) {
+              editor.update(() => {
+                nodes.forEach(node => {
+                  if ($isPaperCutWordNode(node)) {
+                    node.selectNext();
+                    node.remove();
+                  }
+                });
+              });
+              return true;
+            }
+            return false;
           }
 
-          // Get the node at the selection
           const focus = selection.focus;
           const focusNode = focus.getNode();
           
           if ($isPaperCutWordNode(focusNode)) {
-            // If we're at the end of a word node, allow deletion to remove the whole word
-            if (focus.offset === focusNode.getTextContentSize()) {
-              return false;
-            }
-            // Otherwise prevent character deletion within the word
+            // For delete key, always delete the entire word
+            editor.update(() => {
+              focusNode.selectNext();
+              focusNode.remove();
+            });
             return true;
           }
 
-          // Allow deletion if we're not in a word node
           return false;
         },
         COMMAND_PRIORITY_CRITICAL,
@@ -110,7 +124,10 @@ export function EditRestrictionPlugin() {
 
           if (!selection.isCollapsed()) {
             const nodes = selection.getNodes();
-            return nodes.some($isPaperCutWordNode);
+            // If any selected node is a word node, prevent character deletion
+            if (nodes.some($isPaperCutWordNode)) {
+              return true;
+            }
           }
 
           const node = selection.anchor.getNode();
@@ -122,8 +139,7 @@ export function EditRestrictionPlugin() {
       editor.registerCommand(
         DELETE_WORD_COMMAND,
         (payload) => {
-          // Always allow word-level deletions
-          return false;
+          return false; // Always allow word-level deletions
         },
         COMMAND_PRIORITY_CRITICAL,
       )

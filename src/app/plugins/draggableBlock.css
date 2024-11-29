@@ -6,13 +6,13 @@
 
 .segment-content {
   position: relative;
-  min-height: 24px; /* Match the height of your drag handle */
+  min-height: 24px;
 }
 
 .draggable-block-menu {
   position: absolute;
   left: 8px;
-  top: 0;
+  top: 0; /* Align with the start of the text */
   width: 24px;
   height: 24px;
   display: flex;
@@ -25,20 +25,31 @@
   z-index: 10;
 }
 
+[data-lexical-editor] div[draggable="true"] {
+  position: relative;
+}
+
 [data-lexical-editor] div[draggable="true"]:hover .draggable-block-menu {
   opacity: 1;
 }
 
 .draggable-block-target-line {
   pointer-events: none;
-  background: #0ea5e9;
+  background: #0074d9;
   height: 3px;
-  position: absolute;
+  position: fixed; /* Change to fixed to ensure it stays in viewport */
   left: 0;
   right: 0;
-  opacity: 0;
-  transform: translateY(-50%);
   z-index: 60;
   border-radius: 2px;
   box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.2);
+}
+
+.drop-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #0074d9;
+  pointer-events: none;
 }

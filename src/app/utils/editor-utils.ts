@@ -20,12 +20,12 @@ export const createSegmentWithWords = (words: WordData[], isNewSpeaker: boolean 
     segment.append($createTextNode('\n'));
   }
 
-  const timeLabel = $createTextNode(`[${formatTime(words[0].segmentStartTime)}] `);
-  timeLabel.setStyle('color: #888; font-size: 0.8em;');
+  //const timeLabel = $createTextNode(`[${formatTime(words[0].segmentStartTime)}] `);
+  //timeLabel.setStyle('color: #888; font-size: 0.8em;');
   
   const speakerNode = $createPaperCutSpeakerNode(words[0].speaker);
   
-  segment.append(timeLabel);
+  //segment.append(timeLabel);
   segment.append(speakerNode);
 
   words.forEach((wordData, index) => {
