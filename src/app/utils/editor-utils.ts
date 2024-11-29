@@ -5,7 +5,42 @@ import { $createPaperCutSpeakerNode } from '@/app/nodes/PaperCutSpeakerNode';
 import { $isPaperCutSegmentNode } from '@/app/nodes/PaperCutSegmentNode';
 import { WordData, parseClipboardData, getAllWordNodes, formatTime } from './clipboard-utils';
 
-export const createSegmentWithWords = (words: WordData[], isNewSpeaker: boolean = false): PaperCutSegmentNode | null => {
+interface SplitPosition {
+  wordIndex: number;
+  segmentId: string;
+}
+
+// Get splits by tracking word positions and segmentIds
+const getSplitPositions = (editor: LexicalEditor): SplitPosition[] => {
+  const splitPositions: SplitPosition[] = [];
+  const root = $getRoot();
+  let wordIndex = 0;
+  
+  root.getChildren().forEach(node => {
+    if ($isPaperCutSegmentNode(node)) {
+      if (node.isManualSplit()) {
+        splitPositions.push({
+          wordIndex,
+          segmentId: node.getSegmentId()
+        });
+      }
+      // Count words in this segment
+      node.getChildren().forEach(child => {
+        if ($isPaperCutWordNode(child)) {
+          wordIndex++;
+        }
+      });
+    }
+  });
+  
+  return splitPositions;
+};
+
+export const createSegmentWithWords = (
+  words: WordData[], 
+  isNewSpeaker: boolean = false,
+  isManualSplit: boolean = false
+): PaperCutSegmentNode | null => {
   if (words.length === 0) return null;
 
   const segment = $createPaperCutSegmentNode(
@@ -13,19 +48,15 @@ export const createSegmentWithWords = (words: WordData[], isNewSpeaker: boolean 
     words[0].segmentEndTime,
     words[0].segmentId,
     words[0].speaker,
-    words[0].fileId
+    words[0].fileId,
+    isManualSplit
   );
 
   if (isNewSpeaker) {
     segment.append($createTextNode('\n'));
   }
-
-  //const timeLabel = $createTextNode(`[${formatTime(words[0].segmentStartTime)}] `);
-  //timeLabel.setStyle('color: #888; font-size: 0.8em;');
   
   const speakerNode = $createPaperCutSpeakerNode(words[0].speaker);
-  
-  //segment.append(timeLabel);
   segment.append(speakerNode);
 
   words.forEach((wordData, index) => {
@@ -59,13 +90,14 @@ export const handlePaste = (clipboardData: string, editor: LexicalEditor, files:
         const selection = $getSelection();
         const root = $getRoot();
         let insertIndex = 0;
+
+        // Get existing split positions before modifying
+        const splitPositions = getSplitPositions(editor);
   
         if (appendToEnd) {
-          // For "Add" operation - append at the end
           const existingWords = getAllWordNodes(editor, files);
           insertIndex = existingWords.length;
         } else if ($isRangeSelection(selection)) {
-          // For "Insert" operation - use current selection
           const anchorNode = selection.anchor.getNode();
           const offset = selection.anchor.offset;
           
@@ -112,7 +144,7 @@ export const handlePaste = (clipboardData: string, editor: LexicalEditor, files:
             }
           }
         }
-  
+
         const existingWords = getAllWordNodes(editor, files);
         const beforeWords = existingWords.slice(0, insertIndex);
         const afterWords = existingWords.slice(insertIndex);
@@ -122,10 +154,22 @@ export const handlePaste = (clipboardData: string, editor: LexicalEditor, files:
         let currentWords: WordData[] = [];
         let currentSpeaker = '';
         let isFirstSegment = true;
+        let wordCount = 0;
   
-        const flushWords = () => {
+        const flushWords = (forceSplit: boolean = false) => {
           if (currentWords.length > 0) {
-            const segment = createSegmentWithWords(currentWords, !isFirstSegment);
+            // Find if there's a split position matching our current position
+            const split = splitPositions.find(sp => 
+              sp.wordIndex === wordCount - currentWords.length &&
+              sp.segmentId === currentWords[0].segmentId
+            );
+            
+            const segment = createSegmentWithWords(
+              currentWords, 
+              !isFirstSegment || forceSplit,
+              !!split // Mark as manual split if we found a matching split position
+            );
+            
             if (segment) {
               root.append(segment);
               isFirstSegment = false;
@@ -135,11 +179,19 @@ export const handlePaste = (clipboardData: string, editor: LexicalEditor, files:
         };
   
         [...beforeWords, ...newWords, ...afterWords].forEach((word) => {
-          if (word.speaker !== currentSpeaker) {
-            flushWords();
+          // Check if this word is at a split position
+          const atSplitPosition = splitPositions.some(sp => 
+            sp.wordIndex === wordCount && 
+            sp.segmentId === word.segmentId
+          );
+
+          if ((word.speaker !== currentSpeaker) || atSplitPosition) {
+            flushWords(atSplitPosition);
             currentSpeaker = word.speaker;
           }
+
           currentWords.push(word);
+          wordCount++;
         });
   
         flushWords();

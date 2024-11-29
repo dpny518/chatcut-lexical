@@ -62,7 +62,15 @@ function LexicalEditorComponent({ initialState, onChange, tabId }: LexicalEditor
 
   const editorConfig = useMemo(() => ({
     namespace: `PaperCutEditor-${tabId}`,
-    onError: (error: Error) => console.error(error),
+    onError: (error: Error) => {
+      // Avoid logging the error object directly to prevent circular references
+      const errorMessage = {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      };
+      console.error('Lexical Editor Error:', errorMessage);
+    },
     editorState: initialState,
     nodes: [
       PaperCutWordNode,

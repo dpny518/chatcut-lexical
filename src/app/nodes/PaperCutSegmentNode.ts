@@ -1,12 +1,19 @@
-import { ElementNode, NodeKey, SerializedElementNode, $getSelection} from 'lexical';
+import {
+  EditorConfig,
+  ElementNode,
+  LexicalNode,
+  NodeKey,
+  SerializedElementNode,
+} from 'lexical';
 
-export type SerializedPaperCutSegmentNode = SerializedElementNode & {
+export interface SerializedPaperCutSegmentNode extends SerializedElementNode {
   startTime: number;
   endTime: number;
   segmentId: string;
   speaker: string;
   fileId: string;
-};
+  isManualSplit: boolean;
+}
 
 export class PaperCutSegmentNode extends ElementNode {
   __startTime: number;
@@ -14,6 +21,25 @@ export class PaperCutSegmentNode extends ElementNode {
   __segmentId: string;
   __speaker: string;
   __fileId: string;
+  __isManualSplit: boolean;
+
+  constructor(
+    startTime: number,
+    endTime: number,
+    segmentId: string,
+    speaker: string,
+    fileId: string,
+    isManualSplit: boolean = false,
+    key?: NodeKey
+  ) {
+    super(key);
+    this.__startTime = startTime;
+    this.__endTime = endTime;
+    this.__segmentId = segmentId;
+    this.__speaker = speaker;
+    this.__fileId = fileId;
+    this.__isManualSplit = isManualSplit;
+  }
 
   static getType(): string {
     return 'papercut-segment';
@@ -26,44 +52,52 @@ export class PaperCutSegmentNode extends ElementNode {
       node.__segmentId,
       node.__speaker,
       node.__fileId,
+      node.__isManualSplit,
       node.__key
     );
   }
 
-  constructor(
-    startTime: number,
-    endTime: number,
-    segmentId: string,
-    speaker: string,
-    fileId: string,
-    key?: NodeKey,
-  ) {
-    super(key);
-    this.__startTime = startTime;
-    this.__endTime = endTime;
-    this.__segmentId = segmentId;
-    this.__speaker = speaker;
-    this.__fileId = fileId;
+  createDOM(config: EditorConfig): HTMLElement {
+    const element = document.createElement('div');
+    element.classList.add('papercut-segment');
+    return element;
   }
 
-  // Getter methods
+  updateDOM(): boolean {
+    return false;
+  }
+
+  exportJSON(): SerializedPaperCutSegmentNode {
+    return {
+      ...super.exportJSON(),
+      type: 'papercut-segment',
+      startTime: this.__startTime,
+      endTime: this.__endTime,
+      segmentId: this.__segmentId,
+      speaker: this.__speaker,
+      fileId: this.__fileId,
+      isManualSplit: this.__isManualSplit,
+    };
+  }
+
+  static importJSON(serializedNode: SerializedPaperCutSegmentNode): PaperCutSegmentNode {
+    const node = new PaperCutSegmentNode(
+      serializedNode.startTime,
+      serializedNode.endTime,
+      serializedNode.segmentId,
+      serializedNode.speaker,
+      serializedNode.fileId,
+      serializedNode.isManualSplit
+    );
+    return node;
+  }
+
   getStartTime(): number {
     return this.__startTime;
   }
 
   getEndTime(): number {
     return this.__endTime;
-  }
-
-  // Add setter methods
-  setStartTime(time: number): void {
-    const writable = this.getWritable();
-    writable.__startTime = time;
-  }
-
-  setEndTime(time: number): void {
-    const writable = this.getWritable();
-    writable.__endTime = time;
   }
 
   getSegmentId(): string {
@@ -78,82 +112,12 @@ export class PaperCutSegmentNode extends ElementNode {
     return this.__fileId;
   }
 
-  createDOM(): HTMLElement {
-    const container = document.createElement('div');
-    container.className = 'PaperCutSegmentNode';
-    container.setAttribute('data-segment', this.__key);
-    
-    // Create a wrapper for the content to maintain proper alignment
-    const contentWrapper = document.createElement('div');
-    contentWrapper.className = 'segment-content';
-    container.appendChild(contentWrapper);
-    
-    return container;
-  }
-  updateDOM(prevNode: PaperCutSegmentNode, dom: HTMLElement): boolean {
-    // Update any attributes that might affect dragging
-    if (prevNode.__speaker !== this.__speaker) {
-      dom.dataset.speaker = this.__speaker;
-      return true;
-    }
-    return false;
+  isManualSplit(): boolean {
+    return this.__isManualSplit;
   }
 
-  // Add methods required for dragging
-  canInsertAfter(node: ElementNode): boolean {
-    return true;
-  }
-
-  canReplaceWith(replacement: ElementNode): boolean {
-    return replacement instanceof PaperCutSegmentNode;
-  }
-
-  canMergeWith(node: ElementNode): boolean {
-    return false; // Typically segments shouldn't merge
-  }
-
-  // Implement insertNewAfter for drag and drop support
-  insertNewAfter(): ElementNode | null {
-    const newElement = $createPaperCutSegmentNode(
-      this.__startTime,
-      this.__endTime,
-      this.__segmentId,
-      this.__speaker,
-      this.__fileId
-    );
-    
-    const selection = $getSelection();
-    if (selection) {
-      selection.insertNodes([newElement]);
-    }
-    return newElement;
-  }
-
-  exportJSON(): SerializedPaperCutSegmentNode {
-    return {
-      ...super.exportJSON(),
-      startTime: this.__startTime,
-      endTime: this.__endTime,
-      segmentId: this.__segmentId,
-      speaker: this.__speaker,
-      fileId: this.__fileId,
-      type: 'papercut-segment',
-      version: 1,
-    };
-  }
-  
-  static importJSON(serializedNode: SerializedPaperCutSegmentNode): PaperCutSegmentNode {
-    const node = $createPaperCutSegmentNode(
-      serializedNode.startTime,
-      serializedNode.endTime,
-      serializedNode.segmentId,
-      serializedNode.speaker,
-      serializedNode.fileId
-    );
-    node.setFormat(serializedNode.format);
-    node.setIndent(serializedNode.indent);
-    node.setDirection(serializedNode.direction);
-    return node;
+  setManualSplit(value: boolean): void {
+    this.__isManualSplit = value;
   }
 }
 
@@ -162,11 +126,14 @@ export function $createPaperCutSegmentNode(
   endTime: number,
   segmentId: string,
   speaker: string,
-  fileId: string
+  fileId: string,
+  isManualSplit: boolean = false
 ): PaperCutSegmentNode {
-  return new PaperCutSegmentNode(startTime, endTime, segmentId, speaker, fileId);
+  return new PaperCutSegmentNode(startTime, endTime, segmentId, speaker, fileId, isManualSplit);
 }
 
-export function $isPaperCutSegmentNode(node: any): node is PaperCutSegmentNode {
+export function $isPaperCutSegmentNode(
+  node: LexicalNode | null | undefined
+): node is PaperCutSegmentNode {
   return node instanceof PaperCutSegmentNode;
 }
