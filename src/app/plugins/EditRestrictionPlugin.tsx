@@ -32,6 +32,7 @@ export function EditRestrictionPlugin() {
 
   useEffect(() => {
     return mergeRegister(
+      // Enter key handler (unchanged from first code)
       editor.registerCommand(
         KEY_ENTER_COMMAND,
         (event: KeyboardEvent | null) => {
@@ -134,6 +135,52 @@ export function EditRestrictionPlugin() {
         COMMAND_PRIORITY_CRITICAL
       ),
 
+      // Backspace handler (from second code)
+      editor.registerCommand(
+        KEY_BACKSPACE_COMMAND,
+        (payload) => {
+          const selection = $getSelection();
+          if (!$isRangeSelection(selection)) {
+            return false;
+          }
+
+          if (selection.getNodes().some($isPaperCutSegmentNode)) {
+            return false;
+          }
+
+          if (!selection.isCollapsed()) {
+            const nodes = selection.getNodes();
+            if (nodes.some($isPaperCutWordNode)) {
+              editor.update(() => {
+                nodes.forEach(node => {
+                  if ($isPaperCutWordNode(node)) {
+                    node.selectNext();
+                    node.remove();
+                  }
+                });
+              });
+              return true;
+            }
+            return false;
+          }
+
+          const anchor = selection.anchor;
+          const anchorNode = anchor.getNode();
+          
+          if ($isPaperCutWordNode(anchorNode)) {
+            editor.update(() => {
+              anchorNode.selectNext();
+              anchorNode.remove();
+            });
+            return true;
+          }
+
+          return false;
+        },
+        COMMAND_PRIORITY_CRITICAL,
+      ),
+
+      // Delete handler (from second code)
       editor.registerCommand(
         KEY_DELETE_COMMAND,
         (payload) => {
@@ -178,6 +225,7 @@ export function EditRestrictionPlugin() {
         COMMAND_PRIORITY_CRITICAL,
       ),
 
+      // Character deletion handler (from second code)
       editor.registerCommand(
         DELETE_CHARACTER_COMMAND,
         (payload) => {
@@ -199,6 +247,7 @@ export function EditRestrictionPlugin() {
         COMMAND_PRIORITY_CRITICAL,
       ),
 
+      // Word deletion handler (from second code)
       editor.registerCommand(
         DELETE_WORD_COMMAND,
         (payload) => {

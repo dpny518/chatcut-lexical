@@ -1,3 +1,4 @@
+
 .PaperCutSegmentNode {
   position: relative;
   padding-left: 40px;
@@ -12,7 +13,7 @@
 .draggable-block-menu {
   position: absolute;
   left: 8px;
-  top: 0; /* Align with the start of the text */
+  top: 0;
   width: 24px;
   height: 24px;
   display: flex;
@@ -37,12 +38,19 @@
   pointer-events: none;
   background: #0074d9;
   height: 3px;
-  position: fixed; /* Change to fixed to ensure it stays in viewport */
+  position: absolute; /* Changed from fixed to absolute */
   left: 0;
   right: 0;
   z-index: 60;
   border-radius: 2px;
+  transform: translateY(-50%); /* Center the line vertically */
   box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.2);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.draggable-block-target-line.visible {
+  opacity: 1;
 }
 
 .drop-line {
