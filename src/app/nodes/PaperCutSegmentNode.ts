@@ -119,6 +119,10 @@ export class PaperCutSegmentNode extends ElementNode {
   setManualSplit(value: boolean): void {
     this.__isManualSplit = value;
   }
+
+  setEndTime(endTime: number): void {
+    this.__endTime = endTime;
+  }
 }
 
 export function $createPaperCutSegmentNode(

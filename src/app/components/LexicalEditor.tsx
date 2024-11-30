@@ -20,7 +20,7 @@ import { ClearEditorPlugin } from '@/app/plugins/ClearEditorPlugin';
 import PaperCutEditorContent from './PaperCutEditorContent';
 import {PaperCutDraggablePlugin} from '@/app/plugins/PaperCutDraggableBlockPlugin';
 import { TextNode } from 'lexical';
-
+import { PaperCutEnterPlugin } from '@/app/plugins/PaperCutEnterPlugin';
 interface LexicalEditorProps {
   initialState: string | null;
   onChange: (state: string) => void;
@@ -111,7 +111,9 @@ function LexicalEditorComponent({ initialState, onChange, tabId }: LexicalEditor
         <ClearEditorPlugin />
         <PaperCutEditorContent />
         <PaperCutDraggablePlugin anchorElem={containerRef.current || document.body} /> {/* Pass the container ref */}
+        <PaperCutEnterPlugin />
         <RegisterEditorPlugin onEditorCreated={handleEditorCreation} />
+      
       </div>
     </LexicalComposer>
   );
