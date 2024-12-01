@@ -22,7 +22,9 @@ import {PaperCutDraggablePlugin} from '@/app/plugins/PaperCutDraggableBlockPlugi
 import { TextNode } from 'lexical';
 import { PaperCutEnterPlugin } from '@/app/plugins/PaperCutEnterPlugin';
 import '@/styles/papercutEditor.css';
-
+import { PaperCutCursorPlugin } from '@/app/plugins/PaperCutCursorPlugin';
+import { PaperCutCursorNode } from '@/app/nodes/PaperCutCursorNode';
+import PaperCutPastePlugin from '@/app/plugins/PaperCutPastePlugin';
 interface LexicalEditorProps {
   initialState: string | null;
   onChange: (state: string) => void;
@@ -40,7 +42,7 @@ function AutoFocus() {
 function LexicalEditorComponent({ initialState, onChange, tabId }: LexicalEditorProps) {
   const { registerPaperCutEditor, unregisterPaperCutEditor } = useEditors();
   const editorRef = useRef<LexicalEditorType | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null); // Add this ref for the container
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const handleChange = useCallback((editorState: EditorState) => {
     onChange(JSON.stringify(editorState));
@@ -65,7 +67,6 @@ function LexicalEditorComponent({ initialState, onChange, tabId }: LexicalEditor
   const editorConfig = useMemo(() => ({
     namespace: `PaperCutEditor-${tabId}`,
     onError: (error: Error) => {
-      // Avoid logging the error object directly to prevent circular references
       const errorMessage = {
         name: error.name,
         message: error.message,
@@ -78,20 +79,33 @@ function LexicalEditorComponent({ initialState, onChange, tabId }: LexicalEditor
       PaperCutWordNode,
       PaperCutSpeakerNode,
       PaperCutSegmentNode,
-      TextNode
+      TextNode,
+      PaperCutCursorNode
     ],
     editable: true
   }), [initialState, tabId]);
 
+  useEffect(() => {
+    const handleFocus = () => {
+      editorRef.current?.focus();
+    };
+
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [editorRef]);
+
   return (
     <LexicalComposer initialConfig={editorConfig}>
-      <div ref={containerRef} className="editor-container">
+      <div ref={containerRef} className="papercut-editor-container">
         <AutoFocus />
         {initialState && <PaperCutToolbarPlugin />}
         <RichTextPlugin
           contentEditable={
             <ContentEditable 
-              className="editor-input"
+              className="papercut-editor-input"
               spellCheck={false}
               data-gramm="false"
               data-gramm_editor="false"
@@ -100,7 +114,7 @@ function LexicalEditorComponent({ initialState, onChange, tabId }: LexicalEditor
             />
           }
           placeholder={
-            <div className="editor-placeholder">
+            <div className="papercut-editor-placeholder">
               Paste transcript content here...
             </div>
           }
@@ -114,7 +128,9 @@ function LexicalEditorComponent({ initialState, onChange, tabId }: LexicalEditor
         <PaperCutEditorContent />
         <PaperCutDraggablePlugin anchorElem={containerRef.current || document.body} />
         <PaperCutEnterPlugin />
+        <PaperCutPastePlugin />
         <RegisterEditorPlugin onEditorCreated={handleEditorCreation} />
+        <PaperCutCursorPlugin />
       </div>
     </LexicalComposer>
   );

@@ -1,7 +1,7 @@
 'use client';
 
 import React from "react";
-import "@/app/styles.css";
+import '@/styles/layout.css';
 import LeftPanel from "@/app/components/LeftPanel";
 import CenterPanel from "@/app/components/CenterPanel";
 import RightPanel from "@/app/components/RightPanel";

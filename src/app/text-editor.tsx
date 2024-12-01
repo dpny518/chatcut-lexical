@@ -31,6 +31,7 @@ import { useFileSystem } from "@/app/contexts/FileSystemContext";
 import { FileIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Undo, Redo, RefreshCw, Trash2 } from 'lucide-react';
+import '@/styles/mainEditor.css';
 
 function Placeholder() {
     return <div className="editor-placeholder">Upload and Select Some Transcripts.</div>;
@@ -41,24 +42,24 @@ function Placeholder() {
     files: Record<string, { name: string }>;
   }
 
-function CurrentFileIndicator({ selectedFileIds, files }: CurrentFileIndicatorProps) {
-  const getDisplayText = () => {
-    if (selectedFileIds.length === 0) return 'No file selected';
-    if (selectedFileIds.length === 1) {
-      return files[selectedFileIds[0]]?.name || 'Unknown File';
-    }
-    return 'Multiple Selection';
-  };
-
-  return (
-    <div className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50 flex items-center gap-2 border-b px-4 py-2">
-      <FileIcon className="h-4 w-4 text-muted-foreground" />
-      <Badge variant="secondary" className="font-mono text-xs">
-        {getDisplayText()}
-      </Badge>
-    </div>
-  );
-}
+  function CurrentFileIndicator({ selectedFileIds, files }: CurrentFileIndicatorProps) {
+    const getDisplayText = () => {
+      if (selectedFileIds.length === 0) return 'No file selected';
+      if (selectedFileIds.length === 1) {
+        return files[selectedFileIds[0]]?.name || 'Unknown File';
+      }
+      return 'Multiple Selection';
+    };
+  
+    return (
+      <div className="editor-file-indicator">
+        <FileIcon className="h-4 w-4 text-muted-foreground" />
+        <Badge variant="secondary" className="font-mono text-xs">
+          {getDisplayText()}
+        </Badge>
+      </div>
+    );
+  }
 
 const editorConfig = {
     theme: ExampleTheme,
@@ -164,21 +165,21 @@ export function Editor(): JSX.Element | null {
 
     return (
         <LexicalComposer initialConfig={editorConfig}>
-            <div className="editor-container flex flex-col">
-                <ToolbarPlugin />
-                <CurrentFileIndicator selectedFileIds={selectedFileIds} files={files} />
-                <div className="editor-inner flex-grow overflow-auto">
-                    <RichTextPlugin
-                        contentEditable={<ContentEditable className="editor-input min-h-[500px] p-4" />}
-                        placeholder={<Placeholder />}
-                        ErrorBoundary={LexicalErrorBoundary}
-                    />
-                    <HistoryPlugin />
-                    <TabIndentationPlugin />
-                    <FormattedWordsPlugin />
-                    <EditorContent />
-                </div>
-            </div>
+           <div className="editor-container">  
+                        <ToolbarPlugin />
+                        <CurrentFileIndicator selectedFileIds={selectedFileIds} files={files} />
+                        <div className="editor-inner">  
+                            <RichTextPlugin
+                                contentEditable={<ContentEditable className="editor-input" />}  
+                                placeholder={<Placeholder />}
+                                ErrorBoundary={LexicalErrorBoundary}
+                            />
+                            <HistoryPlugin />
+                            <TabIndentationPlugin />
+                            <FormattedWordsPlugin />
+                            <EditorContent />
+                        </div>
+                    </div>
         </LexicalComposer>
     );
 }
