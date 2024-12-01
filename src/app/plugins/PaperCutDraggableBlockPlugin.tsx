@@ -1,7 +1,7 @@
 import { DraggableBlockPlugin_EXPERIMENTAL } from '@lexical/react/LexicalDraggableBlockPlugin';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import { useRef, FC, useState, useEffect } from 'react';
-import '@/app/plugins/draggableBlock.css';
+import '@/styles/draggableBlock.css';
 
 const styles = `
   .draggable-block-menu {

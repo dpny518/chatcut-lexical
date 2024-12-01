@@ -21,6 +21,8 @@ import PaperCutEditorContent from './PaperCutEditorContent';
 import {PaperCutDraggablePlugin} from '@/app/plugins/PaperCutDraggableBlockPlugin';
 import { TextNode } from 'lexical';
 import { PaperCutEnterPlugin } from '@/app/plugins/PaperCutEnterPlugin';
+import '@/styles/papercutEditor.css';
+
 interface LexicalEditorProps {
   initialState: string | null;
   onChange: (state: string) => void;
@@ -83,13 +85,13 @@ function LexicalEditorComponent({ initialState, onChange, tabId }: LexicalEditor
 
   return (
     <LexicalComposer initialConfig={editorConfig}>
-      <div ref={containerRef} className="editor-container relative px-8">
+      <div ref={containerRef} className="editor-container">
         <AutoFocus />
         {initialState && <PaperCutToolbarPlugin />}
         <RichTextPlugin
           contentEditable={
             <ContentEditable 
-              className="editor-input prose max-w-none min-h-[200px] p-4 outline-none relative"
+              className="editor-input"
               spellCheck={false}
               data-gramm="false"
               data-gramm_editor="false"
@@ -98,7 +100,7 @@ function LexicalEditorComponent({ initialState, onChange, tabId }: LexicalEditor
             />
           }
           placeholder={
-            <div className="editor-placeholder absolute top-4 left-4 text-gray-400 select-none pointer-events-none">
+            <div className="editor-placeholder">
               Paste transcript content here...
             </div>
           }
@@ -110,10 +112,9 @@ function LexicalEditorComponent({ initialState, onChange, tabId }: LexicalEditor
         <EditRestrictionPlugin />
         <ClearEditorPlugin />
         <PaperCutEditorContent />
-        <PaperCutDraggablePlugin anchorElem={containerRef.current || document.body} /> {/* Pass the container ref */}
+        <PaperCutDraggablePlugin anchorElem={containerRef.current || document.body} />
         <PaperCutEnterPlugin />
         <RegisterEditorPlugin onEditorCreated={handleEditorCreation} />
-      
       </div>
     </LexicalComposer>
   );
