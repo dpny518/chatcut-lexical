@@ -117,7 +117,7 @@ export class PaperCutGroupNode extends ElementNode {
 
   createDOM(config: EditorConfig): HTMLElement {
     const element = document.createElement('div');
-    element.className = 'papercut-group-node';
+    element.className = 'papercut-group-node'; // Make sure this class is set
     element.dataset.speaker = this.__speaker;
     element.dataset.groupId = this.__id;
     return element;

@@ -57,9 +57,14 @@ export class PaperCutSegmentNode extends ElementNode {
     );
   }
 
-  createDOM(config: EditorConfig): HTMLElement {
+  createDOM(): HTMLElement {
     const element = document.createElement('div');
     element.classList.add('papercut-segment');
+    
+    const content = document.createElement('div');
+    content.classList.add('segment-content');
+    element.appendChild(content);
+    
     return element;
   }
 

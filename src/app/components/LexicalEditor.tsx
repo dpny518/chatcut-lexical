@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useCallback, useMemo, useEffect, useRef } from 'react';
+import React, { useCallback, useMemo, useEffect, useRef, useState } from 'react';
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
@@ -18,7 +18,9 @@ import PaperCutToolbarPlugin from '@/app/plugins/PaperCutToolbarPlugin';
 import { useEditors } from '@/app/contexts/EditorContext';
 import { ClearEditorPlugin } from '@/app/plugins/ClearEditorPlugin';
 import PaperCutEditorContent from './PaperCutEditorContent';
-import {PaperCutDraggablePlugin} from '@/app/plugins/PaperCutDraggableBlockPlugin';
+//import {PaperCutDraggablePlugin} from '@/app/plugins/PaperCutDraggableBlockPlugin';
+import { CustomDraggableBlockPlugin } from '@/app/plugins/CustomDraggableBlockPlugin';
+
 import { TextNode } from 'lexical';
 import { PaperCutEnterPlugin } from '@/app/plugins/PaperCutEnterPlugin';
 interface LexicalEditorProps {
@@ -39,6 +41,7 @@ function LexicalEditorComponent({ initialState, onChange, tabId }: LexicalEditor
   const { registerPaperCutEditor, unregisterPaperCutEditor } = useEditors();
   const editorRef = useRef<LexicalEditorType | null>(null);
   const containerRef = useRef<HTMLDivElement>(null); // Add this ref for the container
+  const [editorAnchor, setEditorAnchor] = useState<HTMLElement | null>(null);
 
   const handleChange = useCallback((editorState: EditorState) => {
     onChange(JSON.stringify(editorState));
@@ -59,6 +62,11 @@ function LexicalEditorComponent({ initialState, onChange, tabId }: LexicalEditor
       }
     };
   }, [unregisterPaperCutEditor, tabId]);
+
+  useEffect(() => {
+    const anchor = document.querySelector('.papercut-editor-input') as HTMLElement;
+    setEditorAnchor(anchor);
+  }, []);
 
   const editorConfig = useMemo(() => ({
     namespace: `PaperCutEditor-${tabId}`,
@@ -83,37 +91,39 @@ function LexicalEditorComponent({ initialState, onChange, tabId }: LexicalEditor
 
   return (
     <LexicalComposer initialConfig={editorConfig}>
-      <div ref={containerRef} className="editor-container relative px-8">
-        <AutoFocus />
-        {initialState && <PaperCutToolbarPlugin />}
-        <RichTextPlugin
-          contentEditable={
-            <ContentEditable 
-              className="editor-input prose max-w-none min-h-[200px] p-4 outline-none relative"
-              spellCheck={false}
-              data-gramm="false"
-              data-gramm_editor="false"
-              data-enable-grammarly="false"
-              suppressContentEditableWarning
-            />
-          }
-          placeholder={
-            <div className="editor-placeholder absolute top-4 left-4 text-gray-400 select-none pointer-events-none">
-              Paste transcript content here...
-            </div>
-          }
-          ErrorBoundary={LexicalErrorBoundary}
-        />
-        <HistoryPlugin />
-        <OnChangePlugin onChange={handleChange} />
-        <WordHoverPlugin />
-        <EditRestrictionPlugin />
-        <ClearEditorPlugin />
-        <PaperCutEditorContent />
-        <PaperCutDraggablePlugin anchorElem={containerRef.current || document.body} /> {/* Pass the container ref */}
-        <PaperCutEnterPlugin />
-        <RegisterEditorPlugin onEditorCreated={handleEditorCreation} />
-      
+      <div ref={containerRef} className="papercut-editor">
+        <div className="px-8 relative">
+          <AutoFocus />
+          {initialState && <PaperCutToolbarPlugin />}
+          <RichTextPlugin
+            contentEditable={
+              <ContentEditable 
+                className="papercut-editor-input prose max-w-none min-h-[200px] p-4 outline-none relative overflow-wrap-break-word break-words"
+                spellCheck={false}
+                data-gramm="false"
+                data-gramm_editor="false"
+                data-enable-grammarly="false"
+                suppressContentEditableWarning
+              />
+            }
+            placeholder={
+              <div className="papercut-editor-placeholder absolute top-4 left-4 text-gray-400 select-none pointer-events-none">
+                Paste transcript content here...
+              </div>
+            }
+            ErrorBoundary={LexicalErrorBoundary}
+          />
+          <HistoryPlugin />
+          <OnChangePlugin onChange={handleChange} />
+          <WordHoverPlugin />
+          <EditRestrictionPlugin />
+          <ClearEditorPlugin />
+          <PaperCutEditorContent />
+          <PaperCutEnterPlugin />
+          <PaperCutEnterPlugin />
+          <CustomDraggableBlockPlugin/>
+          <RegisterEditorPlugin onEditorCreated={handleEditorCreation} />
+        </div>
       </div>
     </LexicalComposer>
   );

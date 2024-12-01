@@ -83,8 +83,17 @@
 }
 /* PaperCut specific styles */
 .papercut-segment {
-  margin: 8px 0;
+  position: relative;
+  padding-left: 32px;
+  margin: 4px 0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  transition: background-color 0.2s;
+}
+
+.segment-content {
+  position: relative;
+  min-height: 24px;
+  padding: 2px 0;
 }
 
 .timestamp-wrapper {
@@ -189,4 +198,5 @@
   font-weight: bold;
   border-bottom: 2px solid var(--accent-color);
 }
+
 

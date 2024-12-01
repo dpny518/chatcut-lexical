@@ -87,7 +87,7 @@ export function PaperCutPanel() {
           
           {openTabs.map(tab => (
             <TabsContent key={tab.id} value={tab.id} className="overflow-visible">
-              <Card className="overflow-visible shadow-sm">
+              <Card className="overflow-visible shadow-sm max-w-[600px] mx-auto">
                 <CardHeader className="pb-2">
                   <Input
                     value={tab.name}
