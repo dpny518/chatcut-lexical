@@ -1,0 +1,96 @@
+/* Segment base styles */
+.PaperCutSegmentNode {
+  position: relative;
+  padding-left: 48px;
+  margin: 4px 0;
+}
+
+.segment-content {
+  position: relative;
+  min-height: 24px;
+}
+
+/* Draggable menu styles */
+.draggable-block-menu {
+  position: absolute;
+  left: 8px;
+  top: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: grab;
+  color: #999;
+  opacity: 0;
+  transition: opacity 0.2s;
+  z-index: 10;
+  border-radius: 4px;
+  padding: 2px;
+  will-change: transform;
+}
+
+.draggable-block-menu .icon {
+  width: 16px;
+  height: 16px;
+  opacity: 0.3;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 3px 0;
+}
+
+.draggable-block-menu .icon::before,
+.draggable-block-menu .icon::after,
+.draggable-block-menu .icon span {
+  content: '';
+  display: block;
+  width: 100%;
+  height: 2px;
+  background-color: currentColor;
+  border-radius: 1px;
+}
+
+.draggable-block-menu:active {
+  cursor: grabbing;
+}
+
+.draggable-block-menu:hover {
+  background-color: #efefef;
+  opacity: 1;
+}
+
+/* Draggable interaction styles */
+[data-lexical-editor] div[draggable="true"] {
+  position: relative;
+}
+
+[data-lexical-editor] div[draggable="true"]:hover .draggable-block-menu {
+  opacity: 1;
+}
+
+/* Drop indicators */
+.draggable-block-target-line {
+  pointer-events: none;
+  background: deepskyblue;
+  height: 4px;
+  position: absolute;
+  left: 0;
+  top: 0;
+  opacity: 0;
+  will-change: transform;
+  transition: opacity 0.2s;
+}
+
+.draggable-block-target-line.visible {
+  opacity: 1;
+}
+
+.drop-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #0074d9;
+  pointer-events: none;
+}

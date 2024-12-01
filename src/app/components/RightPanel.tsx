@@ -4,7 +4,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 
 const RightPanel: React.FC = () => {
   return (
-    <Card className="h-full border-none rounded-none flex flex-col w-[400px] min-w-[400px] max-w-[400px]">
+    <Card className="h-full border-none rounded-none flex flex-col flex-1">
       <CardHeader className="border-b flex-shrink-0 py-3 px-4">
         <CardTitle className="text-lg font-medium">PaperCut Panel</CardTitle>
       </CardHeader>

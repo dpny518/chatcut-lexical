@@ -1,0 +1,66 @@
+/* layout.css */
+
+.transcript-editor {
+  display: flex;
+  height: calc(100vh - 60px);
+  margin-top: 10px;
+}
+
+.file-panel {
+  width: 180px;
+  background-color: #f0f0f0;
+  padding: 10px;
+  overflow-y: auto;
+  border-right: 1px solid #ccc;
+}
+
+.main-editor {
+  flex-grow: 1;
+  padding: 10px;
+  overflow-y: auto;
+}
+
+.right-panel {
+  width: 250px;
+  background-color: #f0f0f0;
+  padding: 10px;
+  overflow-y: auto;
+  border-left: 1px solid #ccc;
+}
+  
+  /* Responsive styles */
+  @media (max-width: 1200px) {
+    .transcript-editor {
+      flex-direction: column;
+      height: auto;
+    }
+  
+    .file-panel, .right-panel {
+      width: 100%;
+      height: 200px;
+      border: none;
+      border-bottom: 1px solid #ccc;
+    }
+  
+    .main-editor {
+      height: 500px;
+    }
+  }
+  
+  /* Utility styles */
+  .resize-handle {
+    width: 4px;
+    background-color: #f0f0f0;
+    cursor: col-resize;
+    transition: background-color 0.2s;
+  }
+  
+  .resize-handle:hover {
+    background-color: #a0a0a0;
+  }
+  
+  /* Tab styles */
+  .tabs-trigger-active {
+    font-weight: bold;
+    border-bottom: 2px solid var(--accent-color);
+  }

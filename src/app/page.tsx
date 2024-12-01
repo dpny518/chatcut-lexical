@@ -1,5 +1,3 @@
-'use client';
-
 import React from "react";
 import '@/styles/layout.css';
 import LeftPanel from "@/app/components/LeftPanel";
@@ -18,16 +16,16 @@ export default function App() {
       {/* Center Panel - adjust max-width */}
       <main className="flex-1 flex flex-col overflow-hidden max-w-4xl">
         <header className="border-b border-border p-4 bg-card flex items-center justify-between">
-          <h1 className="text-lg font-semibold">Transcript Editor</h1>
+          <h1 className="text-lg font-semibold">Source</h1>
         </header>
         <div className="flex-1 overflow-auto">
           <CenterPanel />
         </div>
       </main>
 
-      {/* Right Panel - make narrower */}
-      <aside className="w-120 border-l border-border bg-card flex-shrink-0">
-        <RightPanel />
+      {/* Right Panel - much wider */}
+      <aside className="w-[600px] border-l border-border bg-card flex-shrink-0">  
+         <RightPanel />
       </aside>
     </div>
   );

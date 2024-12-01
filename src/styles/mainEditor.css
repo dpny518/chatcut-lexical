@@ -1,0 +1,80 @@
+/* mainEditor.css */
+
+/* Base editor container */
+.editor-container {
+  margin: 10px auto;
+  width: 100%;
+  color: #000;
+  position: relative;
+  line-height: 20px;
+  font-weight: 400;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+}
+
+.editor-inner {
+  background: #fff;
+  position: relative;
+  flex-grow: 1;
+  overflow: auto;
+  padding: 10px;
+}
+  
+  /* Editor input area */
+  .editor-container .editor-input {
+    min-height: 150px;
+    resize: none;
+    font-size: 15px;
+    position: relative;
+    tab-size: 1;
+    outline: 0;
+    padding: 15px 10px;
+    caret-color: #444;
+    user-select: text !important;
+    -webkit-user-select: text !important;
+    pointer-events: auto !important;
+  }
+  
+  /* Placeholder */
+  .editor-container .editor-placeholder {
+    color: #999;
+    overflow: hidden;
+    position: absolute;
+    text-overflow: ellipsis;
+    top: 15px;
+    left: 10px;
+    font-size: 15px;
+    user-select: none;
+    display: inline-block;
+    pointer-events: none;
+  }
+  
+  /* Selection styles */
+  .editor-container ::selection {
+    background: #007bff;
+    color: #fff;
+  }
+  
+  /* Text formatting */
+  .editor-container .editor-text-bold {
+    font-weight: bold;
+  }
+  
+  .editor-container .editor-text-italic {
+    font-style: italic;
+  }
+  
+  .editor-container .editor-text-underline {
+    text-decoration: underline;
+  }
+  
+  .editor-container .editor-text-strikethrough {
+    text-decoration: line-through;
+  }
+  
+  .editor-container .editor-text-underlineStrikethrough {
+    text-decoration: underline line-through;
+  }
+
+  

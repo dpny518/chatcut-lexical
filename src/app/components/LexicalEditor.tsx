@@ -18,17 +18,31 @@ import PaperCutToolbarPlugin from '@/app/plugins/PaperCutToolbarPlugin';
 import { useEditors } from '@/app/contexts/EditorContext';
 import { ClearEditorPlugin } from '@/app/plugins/ClearEditorPlugin';
 import PaperCutEditorContent from './PaperCutEditorContent';
-import {PaperCutDraggablePlugin} from '@/app/plugins/PaperCutDraggableBlockPlugin';
+import { PaperCutDraggablePlugin } from '@/app/plugins/PaperCutDraggableBlockPlugin';
 import { TextNode } from 'lexical';
 import { PaperCutEnterPlugin } from '@/app/plugins/PaperCutEnterPlugin';
 import '@/styles/papercutEditor.css';
 import { PaperCutCursorPlugin } from '@/app/plugins/PaperCutCursorPlugin';
 import { PaperCutCursorNode } from '@/app/nodes/PaperCutCursorNode';
 import PaperCutPastePlugin from '@/app/plugins/PaperCutPastePlugin';
+
 interface LexicalEditorProps {
   initialState: string | null;
   onChange: (state: string) => void;
   tabId: string;
+}
+
+function InitialStatePlugin({ initialState }: { initialState: string | null }) {
+  const [editor] = useLexicalComposerContext();
+  
+  useEffect(() => {
+    if (initialState) {
+      const parsedState = editor.parseEditorState(initialState);
+      editor.setEditorState(parsedState);
+    }
+  }, [editor, initialState]);
+
+  return null;
 }
 
 function AutoFocus() {
@@ -43,6 +57,8 @@ function LexicalEditorComponent({ initialState, onChange, tabId }: LexicalEditor
   const { registerPaperCutEditor, unregisterPaperCutEditor } = useEditors();
   const editorRef = useRef<LexicalEditorType | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const floatingAnchorElem = containerRef.current;
+  const isSmallWidthViewport = window.innerWidth < 768;
 
   const handleChange = useCallback((editorState: EditorState) => {
     onChange(JSON.stringify(editorState));
@@ -74,7 +90,7 @@ function LexicalEditorComponent({ initialState, onChange, tabId }: LexicalEditor
       };
       console.error('Lexical Editor Error:', errorMessage);
     },
-    editorState: initialState,
+    // Remove initialState from config, we'll handle it with InitialStatePlugin
     nodes: [
       PaperCutWordNode,
       PaperCutSpeakerNode,
@@ -83,25 +99,14 @@ function LexicalEditorComponent({ initialState, onChange, tabId }: LexicalEditor
       PaperCutCursorNode
     ],
     editable: true
-  }), [initialState, tabId]);
-
-  useEffect(() => {
-    const handleFocus = () => {
-      editorRef.current?.focus();
-    };
-
-    window.addEventListener('focus', handleFocus);
-
-    return () => {
-      window.removeEventListener('focus', handleFocus);
-    };
-  }, [editorRef]);
+  }), [tabId]);
 
   return (
     <LexicalComposer initialConfig={editorConfig}>
-      <div ref={containerRef} className="papercut-editor-container">
+      <div ref={containerRef} className="papercut-editor-container PaperCutSegmentNode">
+        <InitialStatePlugin initialState={initialState} />
         <AutoFocus />
-        {initialState && <PaperCutToolbarPlugin />}
+        <PaperCutToolbarPlugin />
         <RichTextPlugin
           contentEditable={
             <ContentEditable 
@@ -126,11 +131,12 @@ function LexicalEditorComponent({ initialState, onChange, tabId }: LexicalEditor
         <EditRestrictionPlugin />
         <ClearEditorPlugin />
         <PaperCutEditorContent />
-        <PaperCutDraggablePlugin anchorElem={containerRef.current || document.body} />
+        {floatingAnchorElem && !isSmallWidthViewport && (
+          <PaperCutDraggablePlugin anchorElem={floatingAnchorElem} />
+        )}
         <PaperCutEnterPlugin />
         <PaperCutPastePlugin />
         <RegisterEditorPlugin onEditorCreated={handleEditorCreation} />
-        <PaperCutCursorPlugin />
       </div>
     </LexicalComposer>
   );
