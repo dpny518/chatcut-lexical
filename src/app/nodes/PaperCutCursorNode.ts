@@ -41,6 +41,10 @@ export class PaperCutCursorNode extends TextNode {
       version: 1,
     };
   }
+
+  static importJSON(serializedNode: any): PaperCutCursorNode {
+    return new PaperCutCursorNode(serializedNode.text || '');
+  }
 }
 
 export function $createPaperCutCursorNode(): PaperCutCursorNode {

@@ -257,8 +257,12 @@ splitText(splitOffset: number): [TextNode, TextNode] {
   getWordIndex(): number {
     return this.__wordIndex || 0;
   }
-}
 
+  setFileId(fileId: string): void {
+    this.__fileId = fileId || '';
+  }
+  
+}
 export function $createPaperCutWordNode(
   text: string,
   startTime: number,

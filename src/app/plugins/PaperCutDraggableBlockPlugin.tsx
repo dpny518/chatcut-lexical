@@ -1,6 +1,5 @@
 import { DraggableBlockPlugin_EXPERIMENTAL } from '@lexical/react/LexicalDraggableBlockPlugin';
 import { useRef, useEffect } from 'react';
-import '@/styles/draggableBlock.css';
 
 const DRAGGABLE_BLOCK_MENU_CLASSNAME = 'draggable-block-menu';
 
@@ -8,20 +7,23 @@ function isOnMenu(element: HTMLElement): boolean {
   return !!element.closest(`.${DRAGGABLE_BLOCK_MENU_CLASSNAME}`);
 }
 
+interface PaperCutDraggablePluginProps {
+  anchorElem?: HTMLElement;
+}
+
 export const PaperCutDraggablePlugin = ({
   anchorElem = document.body,
-}: {
-  anchorElem?: HTMLElement;
-}): JSX.Element => {
+}: PaperCutDraggablePluginProps): JSX.Element => {
   const menuRef = useRef<HTMLDivElement>(null);
   const targetLineRef = useRef<HTMLDivElement>(null);
 
-  // Debug logging
   useEffect(() => {
     console.log('PaperCutDraggablePlugin mounted');
-    console.log('anchorElem:', anchorElem);
-    console.log('menuRef current:', menuRef.current);
-  }, [anchorElem]);
+    if (menuRef.current) {
+      // Reset any transform that might be hiding the menu
+      menuRef.current.style.transform = '';
+    }
+  }, []);
 
   return (
     <DraggableBlockPlugin_EXPERIMENTAL
@@ -29,13 +31,9 @@ export const PaperCutDraggablePlugin = ({
       menuRef={menuRef}
       targetLineRef={targetLineRef}
       menuComponent={
-        <div 
-          ref={menuRef} 
-          className={DRAGGABLE_BLOCK_MENU_CLASSNAME}
-          style={{ backgroundColor: 'rgba(0,0,0,0.05)' }} // Debug styling
-        >
+        <div ref={menuRef} className={DRAGGABLE_BLOCK_MENU_CLASSNAME}>
           <div className="icon">
-            <span></span>
+            <span />
           </div>
         </div>
       }

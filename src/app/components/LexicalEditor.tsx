@@ -8,8 +8,8 @@ import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin';
 import LexicalErrorBoundary from '@lexical/react/LexicalErrorBoundary';
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { EditorState, LexicalEditor as LexicalEditorType, $getRoot, NodeKey } from 'lexical';
-import { $isPaperCutWordNode, PaperCutWordNode } from '@/app/nodes/PaperCutWordNode';
+import { EditorState, LexicalEditor as LexicalEditorType, $getRoot } from 'lexical';
+import { $createPaperCutWordNode, $isPaperCutWordNode, PaperCutWordNode } from '@/app/nodes/PaperCutWordNode';
 import { $isPaperCutSpeakerNode, PaperCutSpeakerNode } from '@/app/nodes/PaperCutSpeakerNode';
 import { $isPaperCutSegmentNode, PaperCutSegmentNode } from '@/app/nodes/PaperCutSegmentNode';
 import { WordHoverPlugin } from '@/app/plugins/WordHoverPlugin';
@@ -19,7 +19,7 @@ import { useEditors } from '@/app/contexts/EditorContext';
 import { ClearEditorPlugin } from '@/app/plugins/ClearEditorPlugin';
 import PaperCutEditorContent from './PaperCutEditorContent';
 import { PaperCutDraggablePlugin } from '@/app/plugins/PaperCutDraggableBlockPlugin';
-import { TextNode } from 'lexical';
+import { TextNode, LexicalNode, $isElementNode } from 'lexical';
 import { PaperCutEnterPlugin } from '@/app/plugins/PaperCutEnterPlugin';
 import '@/styles/papercutEditor.css';
 import { PaperCutCursorPlugin } from '@/app/plugins/PaperCutCursorPlugin';
@@ -37,38 +37,32 @@ interface InitialStatePluginProps {
   tabId: string;
 }
 
-function traverseNodes(root: any, tabId: string) {
-  // Use Lexical's node traversal methods
-  root.getChildren().forEach((child: any) => {
-    if (child.getType() === 'papercut-word') {
-      console.log(`Processing node with tabId: ${tabId}`);
-    }
-    // Recursively traverse if there are children
-    if (child.getChildren) {
-      traverseNodes(child, tabId);
-    }
-  });
-}
-
 function InitialStatePlugin({ initialState, tabId }: InitialStatePluginProps): null {
   const [editor] = useLexicalComposerContext();
   
   useEffect(() => {
     if (initialState) {
       try {
-        const parsedState = editor.parseEditorState(initialState);
-        editor.update(() => {
-          const editorState = parsedState.toJSON();
-          if (editorState.root?.children) {
-            editorState.root.children.forEach((node: any) => {
-              if (node.__type === 'papercut-word') {
-                node.fileId = tabId;
-              }
-            });
+        // First parse into an object to manipulate
+        const stateObj = JSON.parse(initialState);
+        
+        // Deep traverse the state object to ensure all PaperCutWordNodes have fileId
+        const processNode = (node: any) => {
+          if (node.__type === 'papercut-word') {
+            node.fileId = tabId;
           }
-          const updatedState = editor.parseEditorState(JSON.stringify(editorState));
-          editor.setEditorState(updatedState);
-        });
+          if (node.children) {
+            node.children.forEach(processNode);
+          }
+        };
+
+        if (stateObj.root?.children) {
+          stateObj.root.children.forEach(processNode);
+        }
+
+        // Now create editor state from the modified object
+        const updatedState = editor.parseEditorState(JSON.stringify(stateObj));
+        editor.setEditorState(updatedState);
       } catch (error) {
         console.error('Error parsing initial state:', error);
       }
@@ -108,8 +102,11 @@ function LexicalEditorComponent({ initialState, onChange, tabId }: LexicalEditor
     if (currentEditor) {
       currentEditor.update(() => {
         const root = $getRoot();
-        // Use our helper function to traverse the nodes
-        traverseNodes(root, tabId);
+        root.getChildren().forEach((child: LexicalNode) => {
+          if (child.getType() === 'papercut-word') {
+            console.log(`Processing node with tabId: ${tabId}`);
+          }
+        });
       });
     }
     onChange(JSON.stringify(editorState));
