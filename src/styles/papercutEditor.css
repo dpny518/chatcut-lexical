@@ -7,13 +7,14 @@
     height: 100%;
     display: flex;
     flex-direction: column;
-  }
+}
   
-  /* Input area */
-  .papercut-editor-container .papercut-editor-input {
+/* Input area */
+.papercut-editor-container .papercut-editor-input {
     flex: 1;
     min-height: 0;
     padding: 12px;
+    padding-left: 48px; /* Added left padding for draggable blocks */
     outline: none;
     background-color: #fff;
     caret-color: black;
@@ -22,42 +23,42 @@
     word-wrap: break-word;
     word-break: break-word;
     white-space: pre-wrap;
-  }
+}
   
-  /* Content elements */
-  .papercut-editor-container .timestamp-wrapper {
+/* Content elements */
+.papercut-editor-container .timestamp-wrapper {
     display: inline-block;
     margin-right: 8px;
     color: #666;
     font-size: 14px;
-  }
+}
   
-  .papercut-editor-container .segment-timestamp {
+.papercut-editor-container .segment-timestamp {
     font-family: Menlo, Monaco, "Courier New", monospace;
-  }
+}
   
-  .papercut-editor-container .speaker-wrapper {
+.papercut-editor-container .speaker-wrapper {
     display: inline-block;
     margin-right: 8px;
-  }
+}
   
-  .papercut-editor-container .speaker-label {
+.papercut-editor-container .speaker-label {
     font-weight: 600;
     color: #000;
-  }
+}
   
-  .papercut-editor-container .papercut-word {
+.papercut-editor-container .papercut-word {
     display: inline-block;
     margin-right: 4px;
     font-size: 14px;
-  }
+}
   
-  .papercut-editor-container .papercut-word:hover {
+.papercut-editor-container .papercut-word:hover {
     background-color: #f0f0f0;
-  }
+}
   
-  /* Cursor */
-  .papercut-editor-container .papercut-cursor {
+/* Cursor */
+.papercut-editor-container .papercut-cursor {
     display: inline-block !important;
     width: 2px !important;
     height: 1.2em !important;
@@ -70,19 +71,19 @@
     padding: 0 !important;
     font-weight: bold;
     color: black;
-  }
+}
   
-  @keyframes blink {
+@keyframes blink {
     0%, 100% { opacity: 0; }
     50% { opacity: 1; }
-  }
+}
   
-  /* Placeholder */
-  .papercut-editor-placeholder {
+/* Placeholder */
+.papercut-editor-placeholder {
     color: #aaa;
     position: absolute;
     top: 45%;
-    left: 60px;
+    left: 60px; /* Adjusted left position to match the input padding */
     transform: translateY(-50%);
     font-style: italic;
-  }
+}

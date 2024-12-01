@@ -8,7 +8,7 @@ import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin';
 import LexicalErrorBoundary from '@lexical/react/LexicalErrorBoundary';
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { EditorState, LexicalEditor as LexicalEditorType } from 'lexical';
+import { EditorState, LexicalEditor as LexicalEditorType, $getRoot, NodeKey } from 'lexical';
 import { $isPaperCutWordNode, PaperCutWordNode } from '@/app/nodes/PaperCutWordNode';
 import { $isPaperCutSpeakerNode, PaperCutSpeakerNode } from '@/app/nodes/PaperCutSpeakerNode';
 import { $isPaperCutSegmentNode, PaperCutSegmentNode } from '@/app/nodes/PaperCutSegmentNode';
@@ -32,20 +32,53 @@ interface LexicalEditorProps {
   tabId: string;
 }
 
-function InitialStatePlugin({ initialState }: { initialState: string | null }) {
+interface InitialStatePluginProps {
+  initialState: string | null;
+  tabId: string;
+}
+
+function traverseNodes(root: any, tabId: string) {
+  // Use Lexical's node traversal methods
+  root.getChildren().forEach((child: any) => {
+    if (child.getType() === 'papercut-word') {
+      console.log(`Processing node with tabId: ${tabId}`);
+    }
+    // Recursively traverse if there are children
+    if (child.getChildren) {
+      traverseNodes(child, tabId);
+    }
+  });
+}
+
+function InitialStatePlugin({ initialState, tabId }: InitialStatePluginProps): null {
   const [editor] = useLexicalComposerContext();
   
   useEffect(() => {
     if (initialState) {
-      const parsedState = editor.parseEditorState(initialState);
-      editor.setEditorState(parsedState);
+      try {
+        const parsedState = editor.parseEditorState(initialState);
+        editor.update(() => {
+          const editorState = parsedState.toJSON();
+          if (editorState.root?.children) {
+            editorState.root.children.forEach((node: any) => {
+              if (node.__type === 'papercut-word') {
+                node.fileId = tabId;
+              }
+            });
+          }
+          const updatedState = editor.parseEditorState(JSON.stringify(editorState));
+          editor.setEditorState(updatedState);
+        });
+      } catch (error) {
+        console.error('Error parsing initial state:', error);
+      }
     }
-  }, [editor, initialState]);
+  }, [editor, initialState, tabId]);
 
   return null;
 }
 
-function AutoFocus() {
+function AutoFocus(): null {
   const [editor] = useLexicalComposerContext();
   useEffect(() => {
     editor.focus();
@@ -53,7 +86,17 @@ function AutoFocus() {
   return null;
 }
 
-function LexicalEditorComponent({ initialState, onChange, tabId }: LexicalEditorProps) {
+function RegisterEditorPlugin({ onEditorCreated }: { onEditorCreated: (editor: LexicalEditorType) => void }): null {
+  const [editor] = useLexicalComposerContext();
+  
+  useEffect(() => {
+    onEditorCreated(editor);
+  }, [editor, onEditorCreated]);
+
+  return null;
+}
+
+function LexicalEditorComponent({ initialState, onChange, tabId }: LexicalEditorProps): JSX.Element {
   const { registerPaperCutEditor, unregisterPaperCutEditor } = useEditors();
   const editorRef = useRef<LexicalEditorType | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -61,8 +104,16 @@ function LexicalEditorComponent({ initialState, onChange, tabId }: LexicalEditor
   const isSmallWidthViewport = window.innerWidth < 768;
 
   const handleChange = useCallback((editorState: EditorState) => {
+    const currentEditor = editorRef.current;
+    if (currentEditor) {
+      currentEditor.update(() => {
+        const root = $getRoot();
+        // Use our helper function to traverse the nodes
+        traverseNodes(root, tabId);
+      });
+    }
     onChange(JSON.stringify(editorState));
-  }, [onChange]);
+  }, [onChange, tabId]);
 
   const handleEditorCreation = useCallback((editor: LexicalEditorType) => {
     console.log(`LexicalEditor: Editor created for tab ${tabId}`);
@@ -90,7 +141,6 @@ function LexicalEditorComponent({ initialState, onChange, tabId }: LexicalEditor
       };
       console.error('Lexical Editor Error:', errorMessage);
     },
-    // Remove initialState from config, we'll handle it with InitialStatePlugin
     nodes: [
       PaperCutWordNode,
       PaperCutSpeakerNode,
@@ -98,13 +148,16 @@ function LexicalEditorComponent({ initialState, onChange, tabId }: LexicalEditor
       TextNode,
       PaperCutCursorNode
     ],
-    editable: true
+    editable: true,
+    theme: {
+      paragraph: 'PaperCutSegmentNode'
+    }
   }), [tabId]);
 
   return (
     <LexicalComposer initialConfig={editorConfig}>
-      <div ref={containerRef} className="papercut-editor-container PaperCutSegmentNode">
-        <InitialStatePlugin initialState={initialState} />
+      <div ref={containerRef} className="papercut-editor-container">
+        <InitialStatePlugin initialState={initialState} tabId={tabId} />
         <AutoFocus />
         <PaperCutToolbarPlugin />
         <RichTextPlugin
@@ -140,16 +193,6 @@ function LexicalEditorComponent({ initialState, onChange, tabId }: LexicalEditor
       </div>
     </LexicalComposer>
   );
-}
-
-function RegisterEditorPlugin({ onEditorCreated }: { onEditorCreated: (editor: LexicalEditorType) => void }) {
-  const [editor] = useLexicalComposerContext();
-  
-  useEffect(() => {
-    onEditorCreated(editor);
-  }, [editor, onEditorCreated]);
-
-  return null;
 }
 
 LexicalEditorComponent.displayName = 'LexicalEditor';
