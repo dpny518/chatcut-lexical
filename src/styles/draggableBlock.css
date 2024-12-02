@@ -1,4 +1,4 @@
-/* Segment base styles */
+/* Essential segment styles */
 .PaperCutSegmentNode {
   position: relative;
   padding-left: 32px;
@@ -6,118 +6,49 @@
   min-height: 24px;
 }
 
-.segment-content {
-  position: relative;
-  min-height: 24px;
-}
-
-/* Draggable menu styles */
+/* Add a very visible test style */
 .draggable-block-menu {
   border-radius: 4px;
-  padding: 2px;
+  padding: 2px 1px;
   cursor: grab;
-  opacity: 0;
+  opacity: 1 !important; /* Force visibility */
   position: absolute;
   left: 0;
   top: 0;
   will-change: transform;
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: opacity 0.2s ease;
-  background-color: #f5f5f5;
+  background-color: red !important; /* Very visible background */
+  width: 20px !important;
+  height: 20px !important;
 }
 
 .draggable-block-menu .icon {
   width: 16px;
   height: 16px;
   opacity: 0.3;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 4px 0;
-}
-
-.draggable-block-menu .icon::before,
-.draggable-block-menu .icon::after,
-.draggable-block-menu .icon span {
-  content: '';
-  display: block;
-  width: 100%;
-  height: 2px;
-  background-color: #999;
-  border-radius: 1px;
+  background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxsaW5lIHgxPSIzIiB5MT0iMTIiIHgyPSIyMSIgeTI9IjEyIj48L2xpbmU+PGxpbmUgeDE9IjMiIHkxPSI2IiB4Mj0iMjEiIHkyPSI2Ij48L2xpbmU+PGxpbmUgeDE9IjMiIHkxPSIxOCIgeDI9IjIxIiB5Mj0iMTgiPjwvbGluZT48L3N2Zz4=');
 }
 
 .draggable-block-menu:active {
   cursor: grabbing;
-  background-color: #e0e0e0;
 }
 
 .draggable-block-menu:hover {
   background-color: #efefef;
 }
 
-/* Draggable interaction styles */
-[data-lexical-editor] div[draggable="true"] {
-  position: relative;
-}
-
-[data-lexical-editor] div[draggable="true"]:hover .draggable-block-menu {
+/* Show menu on segment hover */
+.PaperCutSegmentNode:hover .draggable-block-menu {
   opacity: 1;
 }
 
-/* Drop indicators */
+/* Essential target line styles */
 .draggable-block-target-line {
   pointer-events: none;
-  background: #0074d9;
-  height: 3px;
+  background: deepskyblue;
+  height: 4px;
   position: absolute;
   left: 0;
-  right: 0;
+  top: 0;
   opacity: 0;
-  transform: translateY(-50%);
-  transition: opacity 0.2s ease;
-}
-
-.draggable-block-target-line.visible {
-  opacity: 1;
-}
-
-.drop-line {
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: #0074d9;
-  pointer-events: none;
-}
-
-/* Base editor container */
-.papercut-editor-container {
-  position: relative;
-  border: 1px solid #e2e2e2;
-  background-color: #fff;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  padding: 0;
-}
-
-/* Input area */
-.papercut-editor-input {
-  flex: 1;
-  min-height: 0;
-  padding: 12px;
-  padding-left: 48px;
-  outline: none;
-  background-color: #fff;
-  caret-color: black;
-  overflow-y: auto;
-  overflow-x: hidden;
-  word-wrap: break-word;
-  word-break: break-word;
-  white-space: pre-wrap;
+  will-change: transform;
 }

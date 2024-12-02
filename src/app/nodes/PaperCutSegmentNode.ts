@@ -111,6 +111,11 @@ export class PaperCutSegmentNode extends ElementNode {
   getFileId(): string {
     return this.__fileId;
   }
+  
+  getClassName(): string {
+    // Make sure this returns 'PaperCutSegmentNode'
+    return 'PaperCutSegmentNode';
+  }
 
   isManualSplit(): boolean {
     return this.__isManualSplit;

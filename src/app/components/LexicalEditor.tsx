@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useCallback, useMemo, useEffect, useRef } from 'react';
+import React, { useCallback, useMemo, useEffect, useRef, useState } from 'react';
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
@@ -97,6 +97,29 @@ function LexicalEditorComponent({ initialState, onChange, tabId }: LexicalEditor
   const floatingAnchorElem = containerRef.current;
   const isSmallWidthViewport = window.innerWidth < 768;
 
+  // Add state for anchor element
+  const [anchorElem, setAnchorElem] = useState<HTMLElement | null>(null);
+
+  // Set anchor element after mount
+  useEffect(() => {
+    if (containerRef.current) {
+      setAnchorElem(containerRef.current);
+      console.log('Container ref set:', containerRef.current);
+    }
+  }, []);
+
+  useEffect(() => {
+    console.log('containerRef changed:', containerRef.current);
+  }, [containerRef.current]);
+
+  useEffect(() => {
+    console.log('Debug: PaperCutDraggablePlugin render attempt', {
+      containerRef: containerRef.current,
+      anchorElem,
+      timestamp: new Date().toISOString()
+    });
+  }, [containerRef.current, anchorElem]);
+
   const handleChange = useCallback((editorState: EditorState) => {
     const currentEditor = editorRef.current;
     if (currentEditor) {
@@ -153,7 +176,14 @@ function LexicalEditorComponent({ initialState, onChange, tabId }: LexicalEditor
 
   return (
     <LexicalComposer initialConfig={editorConfig}>
-      <div ref={containerRef} className="papercut-editor-container">
+      <div 
+        ref={containerRef} 
+        className="papercut-editor-container"
+        style={{ 
+          position: 'relative',
+          minHeight: '100px' // Add minimum height
+        }}
+      >
         <InitialStatePlugin initialState={initialState} tabId={tabId} />
         <AutoFocus />
         <PaperCutToolbarPlugin />
@@ -181,8 +211,9 @@ function LexicalEditorComponent({ initialState, onChange, tabId }: LexicalEditor
         <EditRestrictionPlugin />
         <ClearEditorPlugin />
         <PaperCutEditorContent />
-        {floatingAnchorElem && !isSmallWidthViewport && (
-          <PaperCutDraggablePlugin anchorElem={floatingAnchorElem} />
+        {/* Only render when we have an anchor element */}
+        {anchorElem && (
+          <PaperCutDraggablePlugin anchorElem={anchorElem} />
         )}
         <PaperCutEnterPlugin />
         <PaperCutPastePlugin />
