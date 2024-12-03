@@ -6,8 +6,8 @@ import { Input } from "@/components/ui/input";
 import { X } from "lucide-react";
 import { usePaperCut, PaperCutTab, ContentItem } from '@/app/contexts/PaperCutContext';
 import { useActiveEditor } from '@/app/components/RightPanel/ActiveEditorContext';
-import PapercutEditor, { PapercutEditorRef }   from './PapercutEditor';
-
+import PapercutEditor, { PapercutEditorRef } from './PapercutEditor';
+import { cn } from "@/lib/utils";
 
 export const PaperCutPanel: React.FC = () => {
   const { 
@@ -46,7 +46,6 @@ export const PaperCutPanel: React.FC = () => {
     });
   }, [openTabs, getEditorRef, registerEditor]);
 
-
   const handleCloseTab = (e: React.MouseEvent, tabId: string) => {
     e.preventDefault();
     e.stopPropagation();
@@ -67,7 +66,13 @@ export const PaperCutPanel: React.FC = () => {
             <Button 
               onClick={() => createTab()} 
               variant="outline" 
-              className="text-lg px-8 py-6"
+              className={cn(
+                "text-lg px-8 py-6",
+                "border-border hover:border-primary",
+                "text-foreground hover:text-primary",
+                "transition-colors duration-200",
+                "bg-background/50 hover:bg-background"
+              )}
             >
               Create New PaperCut
             </Button>
@@ -111,7 +116,7 @@ export const PaperCutPanel: React.FC = () => {
                     onChange={(newContent: ContentItem[]) => updateTabContent(tab.id, JSON.stringify(newContent))}
                     tabId={tab.id}
                   />
-                </TabsContent>
+              </TabsContent>
             ))}
           </Tabs>
         )}
@@ -119,3 +124,5 @@ export const PaperCutPanel: React.FC = () => {
     </main>
   );
 };
+
+export default PaperCutPanel;

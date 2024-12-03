@@ -26,6 +26,7 @@ interface FileSystemContextType {
   toggleItemSelection: (itemId: string) => void
   updateFileContent: (fileId: string, newContent: string) => void
   logStructure: () => void
+  uploadFile: (file: File) => void
 }
 
 const FileSystemContext = createContext<FileSystemContextType | undefined>(undefined)
@@ -346,6 +347,12 @@ const contextValue: FileSystemContextType = {
   toggleItemSelection,
   updateFileContent,
   logStructure,
+  uploadFile: (file: File) => {
+    setFiles(prevFiles => ({
+      ...prevFiles,
+      [file.id]: file
+    }));
+  },
 }
 
 return (

@@ -1,214 +1,151 @@
-/* mainEditor.css */
-
-:root {
-  --editor-bg: #000;
-  --editor-text: #fff;
-}
-
 .editor-container {
-  margin: 10px auto;
-  width: 100%;
-  color: var(--editor-text);
-  position: relative;
-  line-height: 20px;
-  font-weight: 400;
-  text-align: left;
-  display: flex;
-  flex-direction: column;
-  background-color: var(--editor-bg);
+  @apply m-2.5 w-full relative leading-5 font-normal text-left bg-card text-foreground rounded-md border border-border;
 }
 
 .editor-inner {
-  background: var(--editor-bg);
-  position: relative;
-  flex-grow: 1;
-  overflow: auto;
-  padding: 10px;
+  @apply bg-card relative p-2.5;
 }
 
-
-/* Editor input area */
-.editor-container .editor-input {
-  min-height: 150px;
-  resize: none;
-  font-size: 15px;
-  position: relative;
+.editor-input {
+  @apply min-h-[150px] resize-none text-[14px] relative outline-none p-4 caret-foreground text-foreground bg-muted font-mono;
   tab-size: 1;
-  outline: 0;
-  padding: 15px 10px;
-  caret-color: #fff;
-  color: #fff;
-  background-color: #000;
 }
 
-/* Placeholder */
-.editor-placeholder {
-  color: #666;
-  overflow: hidden;
-  position: absolute;
-  text-overflow: ellipsis;
-  top: 15px;
-  left: 10px;
-  font-size: 15px;
-  user-select: none;
-  display: inline-block;
-  pointer-events: none;
+.editor-toolbar {
+  @apply px-4 py-2 flex items-center gap-2;
+  height: 4rem;
 }
 
-/* Paragraphs */
+.editor-file-indicator {
+  @apply flex items-center gap-2 px-4 py-2 bg-muted/10 border-b border-border;
+}
+
+/* Timestamps */
+.editor-timestamp {
+  @apply text-muted-foreground text-sm font-mono mr-2;
+}
+
+/* Speaker labels */
+.editor-speaker {
+  @apply text-sky-400 font-semibold mb-1;
+}
+
+/* Individual paragraphs/segments */
 .editor-paragraph {
-  margin: 0 0 15px 0;
-  position: relative;
+  @apply m-0 mb-6 relative border-l-2 border-muted/20 pl-4;
 }
 
-/* Headings */
+/* Toolbar area */
+.editor-toolbar {
+  @apply bg-card/50 border-b border-border px-4 py-2 flex items-center gap-2;
+}
+
+/* File indicator */
+.editor-file-indicator {
+  @apply flex items-center gap-2 px-4 py-2 bg-muted/10 border-b border-border;
+}
+
+/* Selection styling */
+::selection {
+  @apply bg-primary/20 text-foreground;
+}
+
+.editor-placeholder {
+  @apply text-muted-foreground overflow-hidden absolute text-ellipsis top-4 left-2.5 text-[15px] select-none inline-block pointer-events-none;
+}
+
 .editor-heading-h1 {
-  font-size: 24px;
-  color: #fff;
-  font-weight: bold;
-  margin: 10px 0;
+  @apply text-2xl text-foreground font-bold my-2.5;
 }
 
 .editor-heading-h2 {
-  font-size: 20px;
-  color: #fff;
-  font-weight: bold;
-  margin: 10px 0;
+  @apply text-xl text-foreground font-bold my-2.5;
 }
 
 .editor-heading-h3 {
-  font-size: 18px;
-  color: #fff;
-  font-weight: bold;
-  margin: 10px 0;
+  @apply text-lg text-foreground font-bold my-2.5;
 }
 
 .editor-heading-h4 {
-  font-size: 16px;
-  color: #fff;
-  font-weight: bold;
-  margin: 10px 0;
+  @apply text-base text-foreground font-bold my-2.5;
 }
 
 .editor-heading-h5 {
-  font-size: 14px;
-  color: #fff;
-  font-weight: bold;
-  margin: 10px 0;
+  @apply text-sm text-foreground font-bold my-2.5;
 }
 
-/* Lists */
-.editor-list-ol {
-  padding: 0;
-  margin: 0;
-  margin-left: 16px;
-}
-
+.editor-list-ol,
 .editor-list-ul {
-  padding: 0;
-  margin: 0;
-  margin-left: 16px;
+  @apply p-0 m-0 ml-4;
 }
 
 .editor-listitem {
-  margin: 8px 32px 8px 32px;
+  @apply my-2 mx-8;
 }
 
 .editor-nested-listitem {
-  list-style-type: none;
+  @apply list-none;
 }
 
-/* Links */
 .editor-link {
-  color: #6ab0f3;
-  text-decoration: none;
+  @apply text-primary no-underline;
 }
 
-/* Text formatting */
 .editor-text-bold {
-  font-weight: bold;
+  @apply font-bold;
 }
 
 .editor-text-italic {
-  font-style: italic;
+  @apply italic;
 }
 
 .editor-text-underline {
-  text-decoration: underline;
+  @apply underline;
 }
 
 .editor-text-strikethrough {
-  text-decoration: line-through;
+  @apply line-through;
 }
 
 .editor-text-underlineStrikethrough {
-  text-decoration: underline line-through;
+  @apply underline line-through;
 }
 
 .editor-text-code {
-  background-color: #333;
-  padding: 1px 3px;
-  font-family: monospace;
-  border-radius: 3px;
+  @apply bg-muted p-px px-0.5 font-mono rounded;
 }
 
-/* Code block */
 .editor-code {
-  background-color: #1e1e1e;
-  font-family: monospace;
-  display: block;
-  padding: 8px;
-  margin: 8px 0;
+  @apply bg-card font-mono block p-2 my-2 overflow-x-auto relative;
   tab-size: 2;
-  /* white-space: pre; */
-  overflow-x: auto;
-  position: relative;
 }
 
-/* Code highlight */
 .editor-tokenComment {
-  color: #6a9955;
+  @apply text-muted-foreground;
 }
 
-.editor-tokenPunctuation {
-  color: #d4d4d4;
+.editor-tokenPunctuation,
+.editor-tokenOperator {
+  @apply text-foreground;
 }
 
-.editor-tokenProperty {
-  color: #9cdcfe;
+.editor-tokenProperty,
+.editor-tokenVariable {
+  @apply text-sky-300;
 }
 
 .editor-tokenSelector {
-  color: #d7ba7d;
-}
-
-.editor-tokenOperator {
-  color: #d4d4d4;
+  @apply text-amber-300;
 }
 
 .editor-tokenAttr {
-  color: #4ec9b0;
-}
-
-.editor-tokenVariable {
-  color: #9cdcfe;
+  @apply text-emerald-300;
 }
 
 .editor-tokenFunction {
-  color: #dcdcaa;
+  @apply text-yellow-200;
 }
 
-/* Quote */
 .editor-quote {
-  margin: 0;
-  margin-left: 20px;
-  font-style: italic;
-  color: #ccc;
-  border-left-color: #ccc;
-}
-
-/* Selection */
-::selection {
-  background: #3a3a3a;
-  color: #fff;
+  @apply m-0 ml-5 italic text-muted-foreground border-l-muted-foreground;
 }

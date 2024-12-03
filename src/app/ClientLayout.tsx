@@ -21,11 +21,9 @@ export default function ClientLayout({ children, className }: ClientLayoutProps)
       e.stopPropagation()
     }
 
-    // Add event listeners to prevent default file drops
     window.addEventListener('dragover', preventDefault)
     window.addEventListener('drop', preventDefault)
 
-    // Clean up event listeners on unmount
     return () => {
       window.removeEventListener('dragover', preventDefault)
       window.removeEventListener('drop', preventDefault)
@@ -33,7 +31,7 @@ export default function ClientLayout({ children, className }: ClientLayoutProps)
   }, [])
 
   return (
-    <body className={`${className} overflow-hidden`}>
+    <body className={`${className} dark overflow-hidden bg-background text-foreground`}>
       <FileSystemProvider>
         <EditorContentProvider>
           <EditorProvider>

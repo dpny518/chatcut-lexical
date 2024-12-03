@@ -163,23 +163,25 @@ export function Editor(): JSX.Element | null {
 
     if (!isMounted) return null;
 
-    return (
+     return (
         <LexicalComposer initialConfig={editorConfig}>
-           <div className="editor-container h-full">
-                        <ToolbarPlugin />
-                        <CurrentFileIndicator selectedFileIds={selectedFileIds} files={files} />
-                        <div className="editor-inner flex-grow"> 
-                            <RichTextPlugin
-                                contentEditable={<ContentEditable className="editor-input h-full" />}
-                                placeholder={<Placeholder />}
-                                ErrorBoundary={LexicalErrorBoundary}
-                            />
-                            <HistoryPlugin />
-                            <TabIndentationPlugin />
-                            <FormattedWordsPlugin />
-                            <EditorContent />
-                        </div>
-                    </div>
+           <div className="editor-container relative h-full flex flex-col">
+                <CurrentFileIndicator selectedFileIds={selectedFileIds} files={files} />
+                <div className="editor-inner flex-grow overflow-auto pb-16"> 
+                    <RichTextPlugin
+                        contentEditable={<ContentEditable className="editor-input h-full" />}
+                        placeholder={<Placeholder />}
+                        ErrorBoundary={LexicalErrorBoundary}
+                    />
+                    <HistoryPlugin />
+                    <TabIndentationPlugin />
+                    <FormattedWordsPlugin />
+                    <EditorContent />
+                </div>
+                <div className="fixed bottom-0 left-[16rem] right-[600px] border-t border-border bg-card/80 backdrop-blur supports-[backdrop-filter]:bg-card/50">
+                    <ToolbarPlugin />
+                </div>
+           </div>
         </LexicalComposer>
     );
 }

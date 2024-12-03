@@ -2,6 +2,7 @@ import React, { useState, useCallback, useRef, forwardRef, useImperativeHandle }
 import { ContentItem } from '@/app/contexts/PaperCutContext';
 import { parseClipboardData } from '@/app/utils/clipboard-utils';
 import { GripHorizontal } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface PapercutEditorProps {
   content: ContentItem[];
@@ -22,20 +23,9 @@ interface Block {
 
 interface SpeakerColor {
   bg: string;
-  border: string;
-  text: string;
-  wordBg: string;
+  blockHover: string;
+  wordHover: string;
 }
-
-const generateColorForSpeaker = (index: number): SpeakerColor => {
-  const hue = (index * 137.508) % 360;
-  return {
-    bg: `hsl(${hue}, 25%, 95%)`,
-    border: `hsl(${hue}, 40%, 85%)`,
-    text: `hsl(${hue}, 60%, 25%)`,
-    wordBg: `hsl(${hue}, 40%, 90%)`
-  };
-};
 
 const PapercutEditor = forwardRef<PapercutEditorRef, PapercutEditorProps>(({ content, onChange, tabId }, ref) => {
   const [blocks, setBlocks] = useState<Block[]>([]);
@@ -44,7 +34,15 @@ const PapercutEditor = forwardRef<PapercutEditorRef, PapercutEditorProps>(({ con
   const [cursorPosition, setCursorPosition] = useState<{ blockId: string; wordIndex: number } | null>(null);
   const editorRef = useRef<HTMLDivElement>(null);
 
-  
+  const generateColorForSpeaker = (index: number): SpeakerColor => {
+    const hue = (index * 137.508) % 360; // Golden ratio for better color distribution
+    return {
+      bg: `hsla(${hue}, 70%, 30%, 0.03)`,
+      blockHover: `hsla(${hue}, 70%, 30%, 0.08)`,
+      wordHover: `hsla(${hue}, 70%, 30%, 0.15)`  // More visible for word hover
+    };
+  };
+
   const getColorForSpeaker = useCallback((speaker: string): SpeakerColor => {
     if (!(speaker in speakerColorIndices)) {
       setSpeakerColorIndices(prev => ({
@@ -188,8 +186,6 @@ const PapercutEditor = forwardRef<PapercutEditorRef, PapercutEditorProps>(({ con
     setCursorPosition({ blockId, wordIndex });
   }, []);
 
-
-
   const findParentBlock = (node: Node): HTMLElement | null => {
     let current: Node | null = node;
     
@@ -227,6 +223,7 @@ const PapercutEditor = forwardRef<PapercutEditorRef, PapercutEditorProps>(({ con
   const formatWordMetadata = (item: ContentItem): string => {
     return `${item.word},${item.startTime},${item.endTime},${item.wordIndex}|${item.segmentId},${item.segmentStartTime},${item.segmentEndTime},${item.speaker}|${item.fileName},${item.fileId}`;
   };
+
   const addContentAtEnd = useCallback((clipboardData: string) => {
     const newItems = parseClipboardData(clipboardData);
     if (!newItems?.length) return;
@@ -290,60 +287,74 @@ const PapercutEditor = forwardRef<PapercutEditorRef, PapercutEditorProps>(({ con
       contentEditable
       onPaste={handlePaste}
       onKeyDown={handleKeyDown}
-      className={`min-h-[300px] border rounded p-4 overflow-y-auto focus:outline-none ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+      className={cn(
+        "min-h-[300px] border-border rounded-lg p-4 overflow-y-auto focus:outline-none",
+        "bg-background text-foreground",
+        isDragging ? "cursor-grabbing" : "cursor-grab"
+      )}
       suppressContentEditableWarning
       onMouseDown={() => setIsDragging(true)}
       onMouseUp={() => setIsDragging(false)}
       onMouseLeave={() => setIsDragging(false)}
     >
       {blocks.length === 0 && (
-        <div className="text-gray-400 pointer-events-none">Paste transcript data here...</div>
+        <div className="text-muted-foreground pointer-events-none">
+          Paste transcript data here...
+        </div>
       )}
       {blocks.map((block) => {
-        const color = getColorForSpeaker(block.speaker);
+        const colors = getColorForSpeaker(block.speaker);
         return (
           <div 
             key={block.id}
             data-block={block.id}
-            className="mb-4 relative group rounded-lg p-3"
-            style={{ 
-              backgroundColor: color.bg,
-              borderLeft: `4px solid ${color.border}`
-            }}
+            className={cn(
+              "mb-4 relative group rounded-md transition-colors duration-200",
+              "border-l-4 border-transparent"
+            )}
+            style={{
+              backgroundColor: colors.bg,
+              '--block-hover-bg': colors.blockHover,
+              '--word-hover-bg': colors.wordHover
+            } as React.CSSProperties}
             suppressContentEditableWarning
           >
+            <div className="absolute inset-0 bg-[var(--block-hover-bg)] opacity-0 group-hover:opacity-100 transition-opacity rounded-md" />
             <div className="absolute left-0 top-1/2 -translate-y-1/2 -ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
-              <GripHorizontal className="w-4 h-4" style={{ color: color.text }} />
+              <GripHorizontal className="w-4 h-4 text-muted-foreground" />
             </div>
-            <h3 
-              className="mb-2 select-none font-medium" 
-              style={{ color: color.text }}
-              suppressContentEditableWarning
-            >
-              Speaker {block.speaker}
-            </h3>
-            <div className="leading-relaxed" suppressContentEditableWarning>
-              {block.items.map((item, index) => (
-                <span
-                  key={`${item.word}-${index}`}
-                  data-word-metadata={formatWordMetadata(item)}
-                  className="inline-block px-2 py-1 m-0.5 rounded select-text transition-colors"
-                  style={{ 
-                    backgroundColor: color.wordBg,
-                    color: color.text
-                  }}
-                  onClick={() => handleWordClick(block.id, index)}
-                  suppressContentEditableWarning
-                >
-                  {item.word}
-                  {cursorPosition?.blockId === block.id && cursorPosition?.wordIndex === index && (
-                    <span className="inline-block w-0.5 h-4 bg-blue-500 animate-pulse ml-0.5" />
-                  )}
-                </span>
-              ))}
-              {cursorPosition?.blockId === block.id && cursorPosition?.wordIndex === block.items.length && (
-                <span className="inline-block w-0.5 h-4 bg-blue-500 animate-pulse ml-0.5" />
-              )}
+            <div className="px-3 py-2 relative">
+              <h3 
+                className="mb-2 select-none font-medium text-sky-400 text-sm" 
+                suppressContentEditableWarning
+              >
+                Speaker {block.speaker}
+              </h3>
+              <div className="leading-relaxed text-sm font-mono" suppressContentEditableWarning>
+                {block.items.map((item, index) => (
+                  <span
+                    key={`${item.word}-${index}`}
+                    data-word-metadata={formatWordMetadata(item)}
+                    onClick={() => handleWordClick(block.id, index)}
+                    className={cn(
+                      "relative inline-flex items-center px-2 py-1 m-0.5 rounded select-text",
+                      "text-foreground transition-colors text-sm font-mono",
+                      "hover:bg-[var(--word-hover-bg)]"  // Use the more visible hover color for words
+                    )}
+                    suppressContentEditableWarning
+                  >
+                    {item.word}
+                    {cursorPosition?.blockId === block.id && 
+                    cursorPosition?.wordIndex === index && (
+                      <span className="inline-block w-0.5 h-4 bg-sky-500 animate-pulse ml-0.5" />
+                    )}
+                  </span>
+                ))}
+                {cursorPosition?.blockId === block.id && 
+                cursorPosition?.wordIndex === block.items.length && (
+                  <span className="inline-block w-0.5 h-4 bg-sky-500 animate-pulse ml-0.5" />
+                )}
+              </div>
             </div>
           </div>
         );
@@ -351,5 +362,7 @@ const PapercutEditor = forwardRef<PapercutEditorRef, PapercutEditorProps>(({ con
     </div>
   );
 });
+
+PapercutEditor.displayName = 'PapercutEditor';
 
 export default PapercutEditor;
