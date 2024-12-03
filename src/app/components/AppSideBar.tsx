@@ -303,7 +303,7 @@ const FileSystemTree: React.FC<{ parentId: string | null }> = ({ parentId }) => 
             onChange={(e) => setNewFolderName(e.target.value)}
             onBlur={() => handleRenameSubmit(item.id)}
             onKeyPress={(e) => e.key === 'Enter' && handleRenameSubmit(item.id)}
-            className="h-7 text-sm"
+            className="h-7 text-sm border border-primary bg-primary/10 px-2 py-1"
             onClick={(e) => e.stopPropagation()}
             autoFocus
           />

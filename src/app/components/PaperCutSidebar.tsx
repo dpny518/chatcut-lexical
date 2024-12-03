@@ -11,8 +11,11 @@ interface DropIndicator {
   targetId: string;
   position: 'before' | 'after' | 'inside';
 }
+interface Props {
+  forceUpdate: () => void;
+}
 
-const PaperCutTree: React.FC<{ parentId: string | null }> = ({ parentId }) => {
+const PaperCutTree: React.FC<{ parentId: string | null; forceUpdate: () => void }> = ({ parentId, forceUpdate }) => {
   const { 
     getTabs, 
     setActiveTab,
@@ -22,7 +25,8 @@ const PaperCutTree: React.FC<{ parentId: string | null }> = ({ parentId }) => {
     deleteTab,
     updateTabName,
     moveTab,
-    createFolder
+    createFolder,
+    reopenTab
   } = usePaperCut();
   
   const { 
@@ -56,7 +60,7 @@ const PaperCutTree: React.FC<{ parentId: string | null }> = ({ parentId }) => {
     const items = getTabs();
     const clickedItem = items.find(item => item.id === itemId);
     if (!clickedItem) return;
-
+  
     // Handle folder clicks separately
     if (clickedItem.type === 'folder') {
       toggleFolder(itemId, event);
@@ -88,12 +92,19 @@ const PaperCutTree: React.FC<{ parentId: string | null }> = ({ parentId }) => {
       }
     };
 
-    // Update selection first, then activate tab
+    // Update selection first, then activate or reopen tab
     updateSelection();
     if (!event.ctrlKey && !event.metaKey && !event.shiftKey) {
-      setActiveTab(itemId);
+      const clickedItem = items.find(item => item.id === itemId);
+      if (clickedItem) {
+        if (clickedItem.active) {
+          setActiveTab(itemId);
+        } else {
+          reopenTab(itemId);
+        }
+      }
     }
-  }, [getTabs, setPaperCutSelectedIds, paperCutLastSelectedId, setPaperCutLastSelectedId, parentId, setActiveTab]);
+  }, [getTabs, setPaperCutSelectedIds, paperCutLastSelectedId, setPaperCutLastSelectedId, parentId, setActiveTab, reopenTab]);
 
   const items = getTabs()
     .filter(tab => tab.parentId === parentId)
@@ -167,6 +178,7 @@ const PaperCutTree: React.FC<{ parentId: string | null }> = ({ parentId }) => {
       updateTabName(itemId, newName.trim());
       setEditingItemId(null);
       setNewName('');
+      forceUpdate();
     }
   };
 
@@ -213,7 +225,7 @@ const PaperCutTree: React.FC<{ parentId: string | null }> = ({ parentId }) => {
                   onChange={(e) => setNewName(e.target.value)}
                   onBlur={() => handleRenameSubmit(item.id)}
                   onKeyPress={(e) => e.key === 'Enter' && handleRenameSubmit(item.id)}
-                  className="h-7 text-sm"
+                  className="h-7 text-sm border border-primary bg-primary/10 px-2 py-1"
                   onClick={(e) => e.stopPropagation()}
                   autoFocus
                 />
@@ -241,7 +253,7 @@ const PaperCutTree: React.FC<{ parentId: string | null }> = ({ parentId }) => {
           </div>
           
           {item.type === 'folder' && openFolders.has(item.id) && (
-            <PaperCutTree parentId={item.id} />
+            <PaperCutTree parentId={item.id} forceUpdate={forceUpdate} />
           )}
         </React.Fragment>
       ))}
@@ -273,11 +285,11 @@ const PaperCutTree: React.FC<{ parentId: string | null }> = ({ parentId }) => {
   );
 };
 
-export function PaperCutSidebar() {
+export const PaperCutSidebar: React.FC<Props> = ({ forceUpdate }) => {
   return (
     <div className="p-4 space-y-2">
       <h3 className="text-sm font-medium mb-3">PaperCuts</h3>
-      <PaperCutTree parentId={null} />
+      <PaperCutTree parentId={null} forceUpdate={forceUpdate} />
     </div>
   );
-}
+};

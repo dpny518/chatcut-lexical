@@ -10,11 +10,11 @@ export interface PaperCutTab {
   name: string;
   displayName: string;
   type: PaperCutType;
-  editorState: string | null;
-  parentId: string | null;
+  editorState: ContentItem[] | null;  
   active: boolean;
   createdAt: number;
   order: number;
+  parentId: string | null;
 }
 
 export interface ContentItem {
@@ -36,9 +36,10 @@ interface PaperCutContextType {
   createTab: (name?: string, parentId?: string | null) => string;
   createFolder: (name: string, parentId?: string | null) => string;
   closeTab: (id: string) => void;
+  reopenTab: (id: string) => void;
   deleteTab: (id: string) => void;
   updateTabName: (id: string, newName: string) => void;
-  updateTabContent: (id: string, newContent: string) => void;
+  updateTabContent: (id: string, newContent: ContentItem[]) => void;
   setActiveTab: (id: string) => void;
   moveTab: (id: string, newParentId: string | null, beforeId?: string | null) => void;
   getTabs: () => PaperCutTab[];
@@ -52,46 +53,38 @@ const PaperCutContext = createContext<PaperCutContextType | undefined>(undefined
 // Counter for generating unique IDs
 let nextId = 1;
 
+const generateId = (prefix: string) => {
+  return `${prefix}-${nextId++}`;
+};
+
 export const PaperCutProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { setActiveEditor } = useEditors(); // Add this line to get the function from EditorContext
   const [tabs, setTabs] = useState<{ [id: string]: PaperCutTab }>({});
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
-  const initialRenderRef = useRef(true);
+  const { setActiveEditor } = useEditors();
 
-  // Generate a unique ID without using Date.now()
-  const generateId = useCallback((prefix: string) => {
-    return `${prefix}-${nextId++}`;
-  }, []);
-  
   const createTab = useCallback((name?: string, parentId: string | null = null) => {
     const id = generateId('papercut');
     const siblingTabs = Object.values(tabs).filter(t => t.parentId === parentId);
     const maxOrder = Math.max(0, ...siblingTabs.map(t => t.order));
     
-    setTabs(prev => {
-      const newTabs = { ...prev };
-      // Don't deactivate other tabs - remove this part
-      // Instead, just add the new tab as active
-      newTabs[id] = {
+    setTabs(prev => ({
+      ...prev,
+      [id]: {
         id,
-        name: name || `PaperCut ${Object.keys(prev).length + 1}`,
-        displayName: name || `PaperCut ${Object.keys(prev).length + 1}`,
+        name: name || `New Tab ${nextId++}`,
+        displayName: name || `New Tab ${nextId}`,
         type: 'file',
         editorState: null,
         parentId,
         active: true,
         createdAt: nextId,
         order: maxOrder + 1000
-      };
-
-      return newTabs;
-    });
-
+      }
+    }));
     setActiveTabId(id);
     setActiveEditor(id);
-    
     return id;
-}, [tabs, generateId, setActiveEditor]);
+  }, [tabs, setActiveEditor]);
 
   const createFolder = useCallback((name: string, parentId: string | null = null) => {
     const id = generateId('folder');
@@ -115,14 +108,7 @@ export const PaperCutProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       [id]: newFolder
     }));
     return id;
-  }, [tabs, generateId]);
-  const deleteTab = useCallback((id: string) => {
-    setTabs(prev => {
-      const newTabs = { ...prev };
-      delete newTabs[id];
-      return newTabs;
-    });
-  }, []);
+  }, [tabs]);
 
   const closeTab = useCallback((id: string) => {
     setTabs(prev => ({
@@ -144,22 +130,38 @@ export const PaperCutProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setActiveEditor('');
       }
     }
-}, [activeTabId, tabs, setActiveEditor]);
+  }, [activeTabId, tabs, setActiveEditor]);
+
+  const reopenTab = useCallback((id: string) => {
+    setTabs(prev => ({
+      ...prev,
+      [id]: { ...prev[id], active: true }
+    }));
+    setActiveTabId(id);
+    setActiveEditor(id);
+  }, [setActiveEditor]);
+  
+  const deleteTab = useCallback((id: string) => {
+    setTabs(prev => {
+      const newTabs = { ...prev };
+      delete newTabs[id];
+      return newTabs;
+    });
+  }, []);
 
   const updateTabName = useCallback((id: string, newName: string) => {
     setTabs(prev => ({
       ...prev,
-      [id]: { ...prev[id], name: newName }
+      [id]: { ...prev[id], name: newName, displayName: newName }
     }));
   }, []);
 
-  const updateTabContent = useCallback((id: string, newContent: string) => {
+  const updateTabContent = useCallback((id: string, newContent: ContentItem[]) => {
     setTabs(prev => ({
       ...prev,
       [id]: { ...prev[id], editorState: newContent }
     }));
   }, []);
-
   const setActiveTab = useCallback((id: string) => {
     console.log('PaperCutContext: Setting active tab:', id);
     setTabs(prev => {
@@ -246,6 +248,7 @@ export const PaperCutProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     createTab,
     createFolder,
     closeTab,
+    reopenTab,
     deleteTab,
     updateTabName,
     updateTabContent,

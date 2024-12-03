@@ -9,7 +9,10 @@ import { useActiveEditor } from '@/app/components/RightPanel/ActiveEditorContext
 import PapercutEditor, { PapercutEditorRef } from './PapercutEditor';
 import { cn } from "@/lib/utils";
 
-export const PaperCutPanel: React.FC = () => {
+interface Props {
+  forceUpdate: () => void;
+}
+export const PaperCutPanel: React.FC<Props> = ({ forceUpdate }) => {
   const { 
     activeTabId,
     createTab,
@@ -83,9 +86,9 @@ export const PaperCutPanel: React.FC = () => {
               <TabsList className="flex-shrink min-w-0">
                 {openTabs.map((tab: PaperCutTab) => (
                   <div key={tab.id} className="relative flex items-center group">
-                    <TabsTrigger value={tab.id} className="pr-8">
-                      {tab.displayName}
-                    </TabsTrigger>
+                 <TabsTrigger value={tab.id} className="pr-8">
+                    {tab.name}
+                  </TabsTrigger>
                     <span
                       className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 cursor-pointer p-1"
                       onClick={(e) => handleCloseTab(e, tab.id)}
@@ -103,17 +106,20 @@ export const PaperCutPanel: React.FC = () => {
             {openTabs.map((tab: PaperCutTab) => (
               <TabsContent key={tab.id} value={tab.id}>
                 <div className="mb-4">
-                  <Input
-                    value={tab.displayName}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateTabName(tab.id, e.target.value)}
-                    className="font-bold text-lg max-w-md"
-                  />
+                <Input
+                      value={tab.name}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                        updateTabName(tab.id, e.target.value);
+                        forceUpdate();
+                      }}
+                      className="font-bold text-lg max-w-md"
+                    />
                 </div>
                 <PapercutEditor
                     ref={getEditorRef(tab.id)}
                     key={tab.id}
-                    content={Array.isArray(tab.editorState) ? tab.editorState : []}
-                    onChange={(newContent: ContentItem[]) => updateTabContent(tab.id, JSON.stringify(newContent))}
+                    content={tab.editorState || []}
+                    onChange={(newContent: ContentItem[]) => updateTabContent(tab.id, newContent)}
                     tabId={tab.id}
                   />
               </TabsContent>
