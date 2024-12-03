@@ -43,12 +43,18 @@ export const createSegmentWithWords = (
 ): PaperCutSegmentNode | null => {
   if (words.length === 0) return null;
 
+  // Add validation for required fields
+  if (!words[0].fileId) {
+    console.error('Missing fileId in word data:', words[0]);
+    throw new Error('fileId is required for createSegmentWithWords');
+  }
+
   const segment = $createPaperCutSegmentNode(
     words[0].segmentStartTime,
     words[0].segmentEndTime,
     words[0].segmentId,
     words[0].speaker,
-    words[0].fileId,
+    words[0].fileId,  // This should be defined now
     isManualSplit
   );
 
@@ -70,7 +76,7 @@ export const createSegmentWithWords = (
       wordData.endTime,
       wordData.segmentId,
       wordData.speaker,
-      wordData.fileId,
+      wordData.fileId,  // This should be defined
       wordData.wordIndex
     );
 
@@ -79,7 +85,6 @@ export const createSegmentWithWords = (
 
   return segment;
 };
-
 export const handlePaste = (clipboardData: string, editor: LexicalEditor, files: Record<string, any>, appendToEnd: boolean = false): boolean => {
     if (!clipboardData) return false;
   
@@ -207,13 +212,19 @@ export const handlePaste = (clipboardData: string, editor: LexicalEditor, files:
         let currentSpeaker = '';
         let isFirstSegment = true;
         let wordCount = 0;
-  
         const flushWords = (forceSplit: boolean = false) => {
           if (currentWords.length > 0) {
             const split = adjustedSplitPositions.find(sp => 
               sp.wordIndex === wordCount - currentWords.length &&
               sp.segmentId === currentWords[0].segmentId
             );
+            
+            // Add debugging here
+            console.log('Creating segment with words:', {
+              currentWords,
+              firstWord: currentWords[0],
+              fileId: currentWords[0]?.fileId
+            });
             
             const segment = createSegmentWithWords(
               currentWords, 
@@ -222,6 +233,8 @@ export const handlePaste = (clipboardData: string, editor: LexicalEditor, files:
             );
             
             if (segment) {
+              // Log before appending
+              console.log('Created segment:', segment);
               root.append(segment);
               isFirstSegment = false;
             }

@@ -16,15 +16,27 @@ export interface WordData {
 }
 
 export const parseClipboardData = (data: string): WordData[] => {
+  console.log('Raw clipboard data:', data);
   return data.split(' ')
     .filter(word => word.includes('|'))
     .map(wordData => {
-      const [wordInfo, segmentInfo, fileInfo] = wordData.split('|');
+      // Split on | first to get the three main parts
+      const parts = wordData.split('|');
+      const wordInfo = parts[0];
+      const segmentInfo = parts[1];
+      const fileInfo = parts.slice(2).join('|'); // Join the rest back together in case filename contains |
+      
       const [word, wordStart, wordEnd, wordIndex] = wordInfo.split(',');
       const [segmentId, segmentStart, segmentEnd, speaker] = segmentInfo.split(',');
-      const [fileName, fileId] = fileInfo.split(',');
+      
+      // Find the last comma to split filename and fileId
+      const lastCommaIndex = fileInfo.lastIndexOf(',');
+      const fileName = fileInfo.slice(0, lastCommaIndex);
+      const fileId = fileInfo.slice(lastCommaIndex + 1);
 
-      return {
+      console.log('Parsed file info:', { fileName, fileId }); // Debug log
+      
+      const parsedData = {
         word,
         startTime: parseFloat(wordStart) || -1,
         endTime: parseFloat(wordEnd) || -1,
@@ -36,6 +48,9 @@ export const parseClipboardData = (data: string): WordData[] => {
         fileName,
         fileId
       };
+      
+      console.log('Parsed word data:', parsedData);
+      return parsedData;
     });
 };
 
@@ -45,34 +60,54 @@ export const getAllWordNodes = (editor: LexicalEditor, files: Record<string, any
   editor.getEditorState().read(() => {
     const root = $getRoot();
     
+    console.log('Root children:', root.getChildren());
+    
     root.getChildren().forEach(node => {
+      console.log('Node type:', node.getType());
+      
       if ($isPaperCutSegmentNode(node)) {
+        console.log('Found segment node');
         const segmentStartTime = node.getStartTime();
         const segmentEndTime = node.getEndTime();
         
-        node.getChildren().forEach(child => {
+        const children = node.getChildren();
+        console.log('Segment children:', children);
+        
+        children.forEach(child => {
+          console.log('Child type:', child.getType());
+          
           if ($isPaperCutWordNode(child)) {
-            const fileId = child.getFileId();
-            const fileName = files[fileId]?.name || 'unknown';
-            
-            wordNodes.push({
-              word: child.getTextContent(),
-              startTime: child.getStartTime(),
-              endTime: child.getEndTime(),
-              wordIndex: child.getWordIndex(),
-              segmentId: child.getSegmentId(),
-              segmentStartTime,
-              segmentEndTime,
-              speaker: child.getSpeaker(),
-              fileName,
-              fileId
+            console.log('Found word node:', {
+              text: child.getTextContent(),
+              fileId: child.getFileId()
             });
+            
+            try {
+              const fileId = child.getFileId();
+              const fileName = files[fileId]?.name || 'unknown';
+              
+              wordNodes.push({
+                word: child.getTextContent(),
+                startTime: child.getStartTime(),
+                endTime: child.getEndTime(),
+                wordIndex: child.getWordIndex(),
+                segmentId: child.getSegmentId(),
+                segmentStartTime,
+                segmentEndTime,
+                speaker: child.getSpeaker(),
+                fileName,
+                fileId
+              });
+            } catch (error) {
+              console.error('Error processing word node:', error);
+            }
           }
         });
       }
     });
   });
   
+  console.log('Final word nodes:', wordNodes);
   return wordNodes;
 };
 

@@ -1,24 +1,27 @@
 import { DraggableBlockPlugin_EXPERIMENTAL } from '@lexical/react/LexicalDraggableBlockPlugin';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
-import { useRef, useEffect, useState } from 'react';
-import { $getRoot, $isElementNode } from 'lexical';
-import React from 'react';
+import { useRef, useEffect } from 'react';
+import { $getRoot, $isParagraphNode } from 'lexical';
+import { $isPaperCutGroupNode } from '@/app/nodes/PaperCutGroupNode';
 
 const DRAGGABLE_BLOCK_MENU_CLASSNAME = 'draggable-block-menu';
+const STYLE_ID = 'papercut-draggable-styles';
 
 const injectStyles = () => {
-  const styleId = 'papercut-draggable-styles';
-  if (document.getElementById(styleId)) return;
+  if (document.getElementById(STYLE_ID)) return;
 
   const style = document.createElement('style');
-  style.id = styleId;
+  style.id = STYLE_ID;
   style.innerHTML = `
-    .editor-paragraph {
+    .papercut-editor-container {
       position: relative !important;
     }
 
-    [data-lexical-editor] div[draggable="true"] {
-      position: relative;
+    .papercut-group-node {
+      position: relative !important;
+      margin: 8px 0 !important;
+      padding-left: 32px !important;
+      min-height: 24px !important;
     }
 
     .${DRAGGABLE_BLOCK_MENU_CLASSNAME} {
@@ -27,54 +30,52 @@ const injectStyles = () => {
       cursor: grab;
       opacity: 1 !important;
       position: absolute !important;
-      left: 8px !important;
+      left: 0 !important;
       top: 50% !important;
       transform: translateY(-50%) !important;
       width: 24px !important;
       height: 24px !important;
-      background-color: #f5f5f5 !important;
-      z-index: 10;
+      background-color: #e2e8f0 !important;
+      z-index: 10 !important;
       display: flex !important;
       align-items: center !important;
       justify-content: center !important;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
 
-    .${DRAGGABLE_BLOCK_MENU_CLASSNAME}::before,
-    .${DRAGGABLE_BLOCK_MENU_CLASSNAME}::after {
-      content: '';
-      position: absolute;
-      left: 6px;
-      right: 6px;
+    .${DRAGGABLE_BLOCK_MENU_CLASSNAME}:hover {
+      background-color: #cbd5e1 !important;
+    }
+
+    .${DRAGGABLE_BLOCK_MENU_CLASSNAME}:active {
+      cursor: grabbing !important;
+      background-color: #94a3b8 !important;
+    }
+
+    .${DRAGGABLE_BLOCK_MENU_CLASSNAME} .drag-handle-icon {
+      width: 16px;
+      height: 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 2px;
+    }
+
+    .${DRAGGABLE_BLOCK_MENU_CLASSNAME} .drag-handle-line {
       height: 2px;
-      background: #666;
-    }
-
-    .${DRAGGABLE_BLOCK_MENU_CLASSNAME}::before {
-      top: 8px;
-    }
-
-    .${DRAGGABLE_BLOCK_MENU_CLASSNAME}::after {
-      bottom: 8px;
-    }
-
-    .${DRAGGABLE_BLOCK_MENU_CLASSNAME} .icon {
-      width: 12px;
-      height: 2px;
-      background: #666;
+      background-color: #475569;
+      border-radius: 1px;
     }
 
     .draggable-block-target-line {
       pointer-events: none;
-      background: #0074d9;
-      height: 3px;
+      background: #3b82f6;
+      height: 4px;
       position: absolute;
       left: 0;
       right: 0;
       opacity: 0;
       transform: translateY(-50%);
       transition: opacity 0.2s ease;
-      z-index: 9;
     }
   `;
   document.head.appendChild(style);
@@ -84,6 +85,14 @@ function isOnMenu(element: HTMLElement): boolean {
   return !!element.closest(`.${DRAGGABLE_BLOCK_MENU_CLASSNAME}`);
 }
 
+const DragHandleIcon = () => (
+  <div className="drag-handle-icon">
+    <div className="drag-handle-line" />
+    <div className="drag-handle-line" />
+    <div className="drag-handle-line" />
+  </div>
+);
+
 export function PaperCutDraggablePlugin({
   anchorElem,
 }: {
@@ -92,70 +101,47 @@ export function PaperCutDraggablePlugin({
   const [editor] = useLexicalComposerContext();
   const menuRef = useRef<HTMLDivElement>(null);
   const targetLineRef = useRef<HTMLDivElement>(null);
-  const [isHovering, setIsHovering] = useState(false);
 
   useEffect(() => {
     injectStyles();
 
-    // Debug
-    console.log('Editor container:', anchorElem);
-    const paragraphs = anchorElem.querySelectorAll('.editor-paragraph');
-    console.log('Found paragraphs:', paragraphs.length);
-    paragraphs.forEach((p, i) => {
-      console.log(`Paragraph ${i}:`, p.textContent);
-      const isSpeaker = p.querySelector('.editor-text-bold');
-      if (isSpeaker) {
-        console.log('Is speaker paragraph:', isSpeaker.textContent);
-        // Make sure it's draggable
-        p.setAttribute('draggable', 'true');
-        p.setAttribute('data-drag-handle', 'true');
-      }
-    });
-
     editor.update(() => {
       const root = $getRoot();
-      
-      // Find and prepare all speaker sections
-      editor.getEditorState().read(() => {
-        const nodes = root.getChildren();
-        let currentSpeakerGroup: HTMLElement | null = null;
-
-        nodes.forEach((node) => {
-          const dom = editor.getElementByKey(node.getKey());
-          if (!dom) return;
-
-          // Check if this is a speaker header
-          if (dom.querySelector('.editor-text-bold')) {
-            // Create a new speaker group
-            const group = document.createElement('div');
-            group.className = 'papercut-speaker-group';
-            group.setAttribute('data-draggable', 'true');
-            dom.parentNode?.insertBefore(group, dom);
-            group.appendChild(dom);
-            currentSpeakerGroup = group;
-          } else if (currentSpeakerGroup && dom.classList.contains('segment')) {
-            // Add segments to current speaker group
-            currentSpeakerGroup.appendChild(dom);
-          } else if (dom.tagName === 'P') {
-            // Reset speaker group at paragraph breaks
-            currentSpeakerGroup = null;
+      root.getChildren().forEach(node => {
+        if ($isPaperCutGroupNode(node)) {
+          // Set draggable attribute on group nodes
+          const element = editor.getElementByKey(node.getKey());
+          if (element) {
+            element.setAttribute('draggable', 'true');
+            element.setAttribute('data-lexical-drag-target', 'true');
           }
-        });
+        }
       });
     });
+
+    // Observer to handle dynamically added content
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach(mutation => {
+        if (mutation.type === 'childList') {
+          mutation.addedNodes.forEach(node => {
+            if (node instanceof HTMLElement && node.classList.contains('papercut-group-node')) {
+              node.setAttribute('draggable', 'true');
+              node.setAttribute('data-lexical-drag-target', 'true');
+            }
+          });
+        }
+      });
+    });
+
+    observer.observe(anchorElem, {
+      childList: true,
+      subtree: true
+    });
+
+    return () => {
+      observer.disconnect();
+    };
   }, [editor, anchorElem]);
-
-  const handleMouseEnter = () => setIsHovering(true);
-  const handleMouseLeave = () => setIsHovering(false);
-
-  const handleDragStart = (event: React.DragEvent<HTMLDivElement>) => {
-    console.log('Drag started:', event);
-    const target = event.target as HTMLElement;
-    const paragraph = target.closest('.editor-paragraph');
-    if (paragraph) {
-      console.log('Found draggable paragraph:', paragraph);
-    }
-  };
 
   return (
     <DraggableBlockPlugin_EXPERIMENTAL
@@ -166,12 +152,9 @@ export function PaperCutDraggablePlugin({
         <div 
           ref={menuRef} 
           className={DRAGGABLE_BLOCK_MENU_CLASSNAME}
-          draggable={isHovering}
-          onDragStart={handleDragStart}
-          onMouseEnter={handleMouseEnter}
-          onMouseLeave={handleMouseLeave}
+          draggable={true}
         >
-          <div className="icon" />
+          <DragHandleIcon />
         </div>
       }
       targetLineComponent={

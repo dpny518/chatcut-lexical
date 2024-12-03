@@ -8,7 +8,7 @@ import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin';
 import LexicalErrorBoundary from '@lexical/react/LexicalErrorBoundary';
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { EditorState, LexicalEditor as LexicalEditorType, $getRoot } from 'lexical';
+import { EditorState, LexicalEditor as LexicalEditorType, $getRoot,TextNode, LexicalNode, $isElementNode, ParagraphNode  } from 'lexical';
 import { $createPaperCutWordNode, $isPaperCutWordNode, PaperCutWordNode } from '@/app/nodes/PaperCutWordNode';
 import { $isPaperCutSpeakerNode, PaperCutSpeakerNode } from '@/app/nodes/PaperCutSpeakerNode';
 import { $isPaperCutSegmentNode, PaperCutSegmentNode } from '@/app/nodes/PaperCutSegmentNode';
@@ -19,7 +19,6 @@ import { useEditors } from '@/app/contexts/EditorContext';
 import { ClearEditorPlugin } from '@/app/plugins/ClearEditorPlugin';
 import PaperCutEditorContent from './PaperCutEditorContent';
 import { PaperCutDraggablePlugin } from '@/app/plugins/PaperCutDraggableBlockPlugin';
-import { TextNode, LexicalNode, $isElementNode } from 'lexical';
 import { PaperCutEnterPlugin } from '@/app/plugins/PaperCutEnterPlugin';
 import '@/styles/papercutEditor.css';
 import { PaperCutCursorPlugin } from '@/app/plugins/PaperCutCursorPlugin';
@@ -43,13 +42,26 @@ function InitialStatePlugin({ initialState, tabId }: InitialStatePluginProps): n
   useEffect(() => {
     if (initialState) {
       try {
-        // First parse into an object to manipulate
         const stateObj = JSON.parse(initialState);
         
-        // Deep traverse the state object to ensure all PaperCutWordNodes have fileId
         const processNode = (node: any) => {
-          if (node.__type === 'papercut-word') {
+          if (node.type === 'papercut-word') {
+            // Set all required properties for word nodes
             node.fileId = tabId;
+            node.segmentId = node.segmentId || '';
+            node.speaker = node.speaker || '';
+            node.startTime = node.startTime || 0;
+            node.endTime = node.endTime || 0;
+            node.wordIndex = node.wordIndex || 0;
+          }
+          if (node.type === 'papercut-segment') {
+            // Ensure segment nodes have required properties
+            node.fileId = tabId;
+            node.speaker = node.speaker || '';
+            node.startTime = node.startTime || 0;
+            node.endTime = node.endTime || 0;
+            node.segmentId = node.segmentId || '';
+            node.isManualSplit = node.isManualSplit || false;
           }
           if (node.children) {
             node.children.forEach(processNode);
@@ -60,7 +72,6 @@ function InitialStatePlugin({ initialState, tabId }: InitialStatePluginProps): n
           stateObj.root.children.forEach(processNode);
         }
 
-        // Now create editor state from the modified object
         const updatedState = editor.parseEditorState(JSON.stringify(stateObj));
         editor.setEditorState(updatedState);
       } catch (error) {
@@ -71,7 +82,6 @@ function InitialStatePlugin({ initialState, tabId }: InitialStatePluginProps): n
 
   return null;
 }
-
 function AutoFocus(): null {
   const [editor] = useLexicalComposerContext();
   useEffect(() => {
@@ -173,6 +183,27 @@ function LexicalEditorComponent({ initialState, onChange, tabId }: LexicalEditor
       paragraph: 'PaperCutSegmentNode'
     }
   }), [tabId]);
+
+useEffect(() => {
+  if (editorRef.current) {
+    return editorRef.current.registerNodeTransform(
+      ParagraphNode,
+      (node: ParagraphNode) => {
+        console.log('Node before transform:', node);
+        if (node.getType() === 'paragraph' && $isElementNode(node)) {
+          const children = node.getChildren();
+          children.forEach((child: LexicalNode) => {
+            console.log('Child in transform:', {
+              type: child.getType(),
+              text: child.getTextContent?.(),
+              data: child
+            });
+          });
+        }
+      }
+    );
+  }
+}, []);
 
   return (
     <LexicalComposer initialConfig={editorConfig}>
