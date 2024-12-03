@@ -19,8 +19,18 @@ module.exports = {
     			md: 'calc(var(--radius) - 2px)',
     			sm: 'calc(var(--radius) - 4px)'
     		},
+			backgroundColor: {
+				'editor-bg': '#000',
+			  },
+			  textColor: {
+				'editor-text': '#fff',
+			  },
     		colors: {
     			background: 'hsl(var(--background))',
+				editor: {
+					bg: 'var(--editor-bg)',
+					text: 'var(--editor-text)',
+				  },
     			foreground: 'hsl(var(--foreground))',
     			card: {
     				DEFAULT: 'hsl(var(--card))',

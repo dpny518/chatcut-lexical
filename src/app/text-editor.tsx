@@ -165,12 +165,12 @@ export function Editor(): JSX.Element | null {
 
     return (
         <LexicalComposer initialConfig={editorConfig}>
-           <div className="editor-container">  
+           <div className="editor-container h-full">
                         <ToolbarPlugin />
                         <CurrentFileIndicator selectedFileIds={selectedFileIds} files={files} />
-                        <div className="editor-inner">  
+                        <div className="editor-inner flex-grow"> 
                             <RichTextPlugin
-                                contentEditable={<ContentEditable className="editor-input" />}  
+                                contentEditable={<ContentEditable className="editor-input h-full" />}
                                 placeholder={<Placeholder />}
                                 ErrorBoundary={LexicalErrorBoundary}
                             />

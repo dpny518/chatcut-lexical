@@ -1,12 +1,12 @@
 "use client"
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useRef } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { X } from "lucide-react";
 import { usePaperCut, PaperCutTab, ContentItem } from '@/app/contexts/PaperCutContext';
 import { useActiveEditor } from '@/app/components/RightPanel/ActiveEditorContext';
-import PapercutEditor  from './PapercutEditor';
+import PapercutEditor, { PapercutEditorRef }   from './PapercutEditor';
 
 
 export const PaperCutPanel: React.FC = () => {
@@ -20,9 +20,32 @@ export const PaperCutPanel: React.FC = () => {
     closeTab
   } = usePaperCut();
 
-  const { setActiveEditor } = useActiveEditor();
-
+  const { setActiveEditor, registerEditor } = useActiveEditor();
+  const editorRefs = useRef<Record<string, React.RefObject<PapercutEditorRef>>>({});
   const openTabs = getTabs().filter(tab => tab.type === 'file' && tab.active);
+
+  useEffect(() => {
+    if (activeTabId) {
+      setActiveEditor(activeTabId);
+    }
+  }, [activeTabId, setActiveEditor]);
+
+  const getEditorRef = useCallback((tabId: string) => {
+    if (!editorRefs.current[tabId]) {
+      editorRefs.current[tabId] = React.createRef<PapercutEditorRef>();
+    }
+    return editorRefs.current[tabId];
+  }, []);
+
+  useEffect(() => {
+    openTabs.forEach(tab => {
+      const ref = getEditorRef(tab.id);
+      if (ref.current) {
+        registerEditor(tab.id, ref.current);
+      }
+    });
+  }, [openTabs, getEditorRef, registerEditor]);
+
 
   const handleCloseTab = (e: React.MouseEvent, tabId: string) => {
     e.preventDefault();
@@ -82,12 +105,13 @@ export const PaperCutPanel: React.FC = () => {
                   />
                 </div>
                 <PapercutEditor
-                  key={tab.id}
-                  content={Array.isArray(tab.editorState) ? tab.editorState : []}
-                  onChange={(newContent: ContentItem[]) => updateTabContent(tab.id, JSON.stringify(newContent))}
-                  tabId={tab.id}
-                />
-              </TabsContent>
+                    ref={getEditorRef(tab.id)}
+                    key={tab.id}
+                    content={Array.isArray(tab.editorState) ? tab.editorState : []}
+                    onChange={(newContent: ContentItem[]) => updateTabContent(tab.id, JSON.stringify(newContent))}
+                    tabId={tab.id}
+                  />
+                </TabsContent>
             ))}
           </Tabs>
         )}

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, forwardRef, useImperativeHandle } from 'react';
 import { ContentItem } from '@/app/contexts/PaperCutContext';
 import { parseClipboardData } from '@/app/utils/clipboard-utils';
 import { GripHorizontal } from "lucide-react";
@@ -7,6 +7,11 @@ interface PapercutEditorProps {
   content: ContentItem[];
   onChange: (newContent: ContentItem[]) => void;
   tabId: string;
+}
+
+export interface PapercutEditorRef {
+  addContentAtEnd: (clipboardData: string) => void;
+  addContentAtCursor: (clipboardData: string) => void;
 }
 
 interface Block {
@@ -32,13 +37,14 @@ const generateColorForSpeaker = (index: number): SpeakerColor => {
   };
 };
 
-const PapercutEditor: React.FC<PapercutEditorProps> = ({ content, onChange, tabId }) => {
+const PapercutEditor = forwardRef<PapercutEditorRef, PapercutEditorProps>(({ content, onChange, tabId }, ref) => {
   const [blocks, setBlocks] = useState<Block[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [speakerColorIndices, setSpeakerColorIndices] = useState<Record<string, number>>({});
   const [cursorPosition, setCursorPosition] = useState<{ blockId: string; wordIndex: number } | null>(null);
   const editorRef = useRef<HTMLDivElement>(null);
 
+  
   const getColorForSpeaker = useCallback((speaker: string): SpeakerColor => {
     if (!(speaker in speakerColorIndices)) {
       setSpeakerColorIndices(prev => ({
@@ -221,6 +227,62 @@ const PapercutEditor: React.FC<PapercutEditorProps> = ({ content, onChange, tabI
   const formatWordMetadata = (item: ContentItem): string => {
     return `${item.word},${item.startTime},${item.endTime},${item.wordIndex}|${item.segmentId},${item.segmentStartTime},${item.segmentEndTime},${item.speaker}|${item.fileName},${item.fileId}`;
   };
+  const addContentAtEnd = useCallback((clipboardData: string) => {
+    const newItems = parseClipboardData(clipboardData);
+    if (!newItems?.length) return;
+
+    setBlocks(prevBlocks => {
+      const newBlock = {
+        id: `block-${Date.now()}`,
+        items: newItems,
+        speaker: newItems[0].speaker
+      };
+      return [...prevBlocks, newBlock];
+    });
+  }, []);
+
+  const addContentAtCursor = useCallback((clipboardData: string) => {
+    const newItems = parseClipboardData(clipboardData);
+    if (!newItems?.length) return;
+
+    setBlocks(prevBlocks => {
+      if (!cursorPosition || prevBlocks.length === 0) {
+        // If no cursor position, just append as new block
+        const newBlock = {
+          id: `block-${Date.now()}`,
+          items: newItems,
+          speaker: newItems[0].speaker
+        };
+        return [...prevBlocks, newBlock];
+      }
+
+      // Insert at cursor position
+      const blockIndex = prevBlocks.findIndex(b => b.id === cursorPosition.blockId);
+      if (blockIndex === -1) return prevBlocks;
+
+      const currentBlock = prevBlocks[blockIndex];
+      const wordIndex = cursorPosition.wordIndex;
+      const newBlocks = [...prevBlocks];
+
+      // Split current block items and insert new items
+      const beforeItems = currentBlock.items.slice(0, wordIndex);
+      const afterItems = currentBlock.items.slice(wordIndex);
+
+      const updatedBlock = {
+        ...currentBlock,
+        items: [...beforeItems, ...newItems, ...afterItems]
+      };
+
+      newBlocks[blockIndex] = updatedBlock;
+
+      return newBlocks;
+    });
+  }, [cursorPosition]);
+
+  useImperativeHandle(ref, () => ({
+    addContentAtEnd,
+    addContentAtCursor
+  }));
 
   return (
     <div 
@@ -288,6 +350,6 @@ const PapercutEditor: React.FC<PapercutEditorProps> = ({ content, onChange, tabI
       })}
     </div>
   );
-};
+});
 
 export default PapercutEditor;

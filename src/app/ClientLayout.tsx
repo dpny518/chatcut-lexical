@@ -7,6 +7,7 @@ import { DynamicFormattedWordsProvider } from '@/app/components/DynamicFormatted
 import { PaperCutProvider } from '@/app/contexts/PaperCutContext'
 import { EditorProvider } from '@/app/contexts/EditorContext'
 import { DragDropWrapper } from '@/app/components/DragDropWrapper'
+import { ActiveEditorProvider } from '@/app/components/RightPanel/ActiveEditorContext'
 
 interface ClientLayoutProps {
   children: React.ReactNode
@@ -38,9 +39,11 @@ export default function ClientLayout({ children, className }: ClientLayoutProps)
           <EditorProvider>
             <PaperCutProvider>
               <DynamicFormattedWordsProvider>
-                <DragDropWrapper>
-                  {children}
-                </DragDropWrapper>
+                <ActiveEditorProvider>
+                  <DragDropWrapper>
+                    {children}
+                  </DragDropWrapper>
+                </ActiveEditorProvider>
               </DynamicFormattedWordsProvider>
             </PaperCutProvider>
           </EditorProvider>

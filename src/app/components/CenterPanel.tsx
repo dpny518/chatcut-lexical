@@ -4,8 +4,8 @@ import { FormattedWordsProvider } from "@/app/contexts/FormattedWordsContext";
 
 export default function CenterPanel() {
   return (
-    <main className="flex-1 h-full bg-muted/50 text-foreground overflow-auto">
-      <div className="w-full px-2"> {/* Reduced padding */}
+    <main className="flex-1 h-full bg-editor-bg text-editor-text overflow-auto">
+      <div className="w-full px-2">
         <FormattedWordsProvider>
           <Editor />
         </FormattedWordsProvider>

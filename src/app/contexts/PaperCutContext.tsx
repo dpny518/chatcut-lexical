@@ -1,8 +1,8 @@
 // src/app/contexts/PaperCutContext.tsx
 'use client'
-import React, { createContext, useContext, useState, useCallback, useRef, useMemo } from 'react'
-import { useEditorContent } from '@/app/contexts/EditorContentContext'
+import React, { createContext, useContext, useState, useCallback, useRef } from 'react'
 import { useEditors } from '@/app/contexts/EditorContext'
+
 export type PaperCutType = 'file' | 'folder';
 
 export interface PaperCutTab {
@@ -269,5 +269,8 @@ export const usePaperCut = () => {
   if (!context) {
     throw new Error('usePaperCut must be used within a PaperCutProvider');
   }
-  return context;
+  return {
+    ...context,
+    activeTabId: context.activeTabId,
+  };
 };
