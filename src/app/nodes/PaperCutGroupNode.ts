@@ -134,6 +134,27 @@ export class PaperCutGroupNode extends ElementNode {
     }
     return false;
   }
+
+  static create(
+    fileId: string,
+    startTime: number,
+    endTime: number,
+    speaker: string
+  ): PaperCutGroupNode {
+    const id = `group-${speaker}-${Date.now()}`;
+    return new PaperCutGroupNode(id, fileId, startTime, endTime, speaker);
+  }
+
+  updateTimeRange(startTime: number, endTime: number): void {
+    this.__startTime = startTime;
+    this.__endTime = endTime;
+  }
+
+  mergeWith(otherGroup: PaperCutGroupNode): void {
+    this.__startTime = Math.min(this.__startTime, otherGroup.__startTime);
+    this.__endTime = Math.max(this.__endTime, otherGroup.__endTime);
+    this.append(...otherGroup.getChildren());
+  }
 }
 
 export function $createPaperCutGroupNode(

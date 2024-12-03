@@ -104,12 +104,16 @@ export function PaperCutDraggablePlugin({
 
   useEffect(() => {
     injectStyles();
-
+  
     editor.update(() => {
       const root = $getRoot();
-      root.getChildren().forEach(node => {
+      const children = root.getChildren();
+      console.log('Root children:', children); // Debug log
+      
+      children.forEach(node => {
+        console.log('Node type:', node.getType()); // Debug log
         if ($isPaperCutGroupNode(node)) {
-          // Set draggable attribute on group nodes
+          console.log('Found group node'); // Debug log
           const element = editor.getElementByKey(node.getKey());
           if (element) {
             element.setAttribute('draggable', 'true');
@@ -118,7 +122,6 @@ export function PaperCutDraggablePlugin({
         }
       });
     });
-
     // Observer to handle dynamically added content
     const observer = new MutationObserver((mutations) => {
       mutations.forEach(mutation => {

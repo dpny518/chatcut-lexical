@@ -1,6 +1,6 @@
 // src/app/contexts/PaperCutContext.tsx
 'use client'
-import React, { createContext, useContext, useState, useCallback, useRef } from 'react'
+import React, { createContext, useContext, useState, useCallback, useRef, useMemo } from 'react'
 import { useEditorContent } from '@/app/contexts/EditorContentContext'
 import { useEditors } from '@/app/contexts/EditorContext'
 export type PaperCutType = 'file' | 'folder';
@@ -8,12 +8,26 @@ export type PaperCutType = 'file' | 'folder';
 export interface PaperCutTab {
   id: string;
   name: string;
+  displayName: string;
   type: PaperCutType;
   editorState: string | null;
   parentId: string | null;
   active: boolean;
   createdAt: number;
   order: number;
+}
+
+export interface ContentItem {
+  word: string;
+  startTime: number;
+  endTime: number;
+  wordIndex: number;
+  segmentId: string;
+  segmentStartTime: number;
+  segmentEndTime: number;
+  speaker: string;
+  fileName: string;
+  fileId: string;
 }
 
 interface PaperCutContextType {
@@ -30,6 +44,7 @@ interface PaperCutContextType {
   getTabs: () => PaperCutTab[];
   getAllContents: (folderId: string) => string[];
   isAllContentsSelected: (folderId: string) => boolean;
+  getTabByDisplayName: (displayName: string) => PaperCutTab | undefined;
 }
 
 const PaperCutContext = createContext<PaperCutContextType | undefined>(undefined);
@@ -60,6 +75,7 @@ export const PaperCutProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       newTabs[id] = {
         id,
         name: name || `PaperCut ${Object.keys(prev).length + 1}`,
+        displayName: name || `PaperCut ${Object.keys(prev).length + 1}`,
         type: 'file',
         editorState: null,
         parentId,
@@ -85,6 +101,7 @@ export const PaperCutProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const newFolder: PaperCutTab = {
       id,
       name,
+      displayName: name,
       type: 'folder',
       editorState: null,
       parentId,
@@ -219,6 +236,10 @@ export const PaperCutProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     });
   }, [tabs, getAllContents]);
 
+  const getTabByDisplayName = useCallback((displayName: string) => {
+    return Object.values(tabs).find(tab => tab.name === displayName);
+  }, [tabs]);
+
   const contextValue: PaperCutContextType = {
     tabs,
     activeTabId,
@@ -233,6 +254,7 @@ export const PaperCutProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     getTabs,
     getAllContents,
     isAllContentsSelected,
+    getTabByDisplayName,
   };
 
   return (

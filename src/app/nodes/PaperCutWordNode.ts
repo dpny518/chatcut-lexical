@@ -262,7 +262,27 @@ splitText(splitOffset: number): [TextNode, TextNode] {
     this.__fileId = fileId || '';
   }
   
+
+  // Add a static method to create a new PaperCutWordNode
+  static create(
+    text: string,
+    startTime: number,
+    endTime: number,
+    segmentId: string,
+    speaker: string,
+    fileId: string,
+    wordIndex: number
+  ): PaperCutWordNode {
+    return new PaperCutWordNode(text, startTime, endTime, segmentId, speaker, fileId, wordIndex);
+  }
+
+  // Add a method to merge this word with another word
+  mergeWith(otherWord: PaperCutWordNode): void {
+    this.__text += otherWord.__text; // Concatenate the text of the two words
+    this.__endTime = otherWord.__endTime; // Update the end time to the end time of the other word
+  }
 }
+
 export function $createPaperCutWordNode(
   text: string,
   startTime: number,

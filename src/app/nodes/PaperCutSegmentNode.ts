@@ -60,9 +60,11 @@ export class PaperCutSegmentNode extends ElementNode {
   createDOM(config: EditorConfig): HTMLElement {
     const element = document.createElement('div');
     element.classList.add('papercut-segment');
+    element.setAttribute('data-lexical-drag-target', 'true');
     return element;
   }
 
+ 
   updateDOM(): boolean {
     return false;
   }
@@ -111,7 +113,7 @@ export class PaperCutSegmentNode extends ElementNode {
   getFileId(): string {
     return this.__fileId;
   }
-  
+
   getClassName(): string {
     // Make sure this returns 'PaperCutSegmentNode'
     return 'PaperCutSegmentNode';
@@ -127,6 +129,23 @@ export class PaperCutSegmentNode extends ElementNode {
 
   setEndTime(endTime: number): void {
     this.__endTime = endTime;
+  }
+
+  static create(
+    startTime: number,
+    endTime: number,
+    segmentId: string,
+    speaker: string,
+    fileId: string,
+    isManualSplit: boolean = false
+  ): PaperCutSegmentNode {
+    return new PaperCutSegmentNode(startTime, endTime, segmentId, speaker, fileId, isManualSplit);
+  }
+
+  mergeWith(otherSegment: PaperCutSegmentNode): void {
+    this.__startTime = Math.min(this.__startTime, otherSegment.__startTime);
+    this.__endTime = Math.max(this.__endTime, otherSegment.__endTime);
+    this.append(...otherSegment.getChildren());
   }
 }
 

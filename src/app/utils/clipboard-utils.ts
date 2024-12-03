@@ -1,143 +1,62 @@
-import { LexicalEditor, $getRoot } from 'lexical';
-import { $isPaperCutWordNode } from '@/app/nodes/PaperCutWordNode';
-import { $isPaperCutSegmentNode } from '@/app/nodes/PaperCutSegmentNode';
+import { ContentItem } from '@/app/contexts/PaperCutContext';
 
-export interface WordData {
-  word: string;
-  startTime: number;
-  endTime: number;
-  wordIndex: number;
-  segmentId: string;
-  segmentStartTime: number;
-  segmentEndTime: number;
-  speaker: string;
-  fileName: string;
-  fileId: string;
-}
+export function parseClipboardData(data: string): ContentItem[] {
+  if (!data) {
+    console.warn('No data provided to parseClipboardData');
+    return [];
+  }
 
-export const parseClipboardData = (data: string): WordData[] => {
-  console.log('Raw clipboard data:', data);
-  return data.split(' ')
-    .filter(word => word.includes('|'))
-    .map(wordData => {
-      // Split on | first to get the three main parts
-      const parts = wordData.split('|');
-      const wordInfo = parts[0];
-      const segmentInfo = parts[1];
-      const fileInfo = parts.slice(2).join('|'); // Join the rest back together in case filename contains |
-      
-      const [word, wordStart, wordEnd, wordIndex] = wordInfo.split(',');
-      const [segmentId, segmentStart, segmentEnd, speaker] = segmentInfo.split(',');
-      
-      // Find the last comma to split filename and fileId
-      const lastCommaIndex = fileInfo.lastIndexOf(',');
-      const fileName = fileInfo.slice(0, lastCommaIndex);
-      const fileId = fileInfo.slice(lastCommaIndex + 1);
+  // Split by space while preserving metadata structure
+  // Look for the pattern: word,number,number,number|
+  const words = data.trim().split(/(?<=\|[^|]+\|[^|]+\|[^|]+)\s+/);
+  const processedItems: ContentItem[] = [];
 
-      console.log('Parsed file info:', { fileName, fileId }); // Debug log
-      
-      const parsedData = {
+  for (const wordData of words) {
+    if (!wordData.includes('|')) continue;
+
+    try {
+      // Find the pipe separators
+      const lastPipeIndex = wordData.lastIndexOf('|');
+      const secondLastPipeIndex = wordData.lastIndexOf('|', lastPipeIndex - 1);
+
+      // Split into three main parts
+      const wordPart = wordData.substring(0, secondLastPipeIndex);
+      const segmentPart = wordData.substring(secondLastPipeIndex + 1, lastPipeIndex);
+      const filePart = wordData.substring(lastPipeIndex + 1);
+
+      // Parse word information
+      const [word = '', startTime = '-1', endTime = '-1', wordIndex = '-1'] = wordPart.split(',');
+
+      // Parse segment information
+      const [segmentId = '', segmentStartTime = '0', segmentEndTime = '0', speaker = ''] = segmentPart.split(',');
+
+      // Parse file information
+      const lastCommaIndex = filePart.lastIndexOf(',');
+      const fileName = filePart.substring(0, lastCommaIndex);
+      const fileId = filePart.substring(lastCommaIndex + 1);
+
+      const item: ContentItem = {
         word,
-        startTime: parseFloat(wordStart) || -1,
-        endTime: parseFloat(wordEnd) || -1,
+        startTime: parseFloat(startTime),
+        endTime: parseFloat(endTime),
         wordIndex: parseInt(wordIndex),
         segmentId,
-        segmentStartTime: parseFloat(segmentStart) || -1,
-        segmentEndTime: parseFloat(segmentEnd) || -1,
+        segmentStartTime: parseFloat(segmentStartTime),
+        segmentEndTime: parseFloat(segmentEndTime),
         speaker,
         fileName,
         fileId
       };
-      
-      console.log('Parsed word data:', parsedData);
-      return parsedData;
-    });
-};
 
-export const getAllWordNodes = (editor: LexicalEditor, files: Record<string, any>): WordData[] => {
-  let wordNodes: WordData[] = [];
-  
-  editor.getEditorState().read(() => {
-    const root = $getRoot();
-    
-    console.log('Root children:', root.getChildren());
-    
-    root.getChildren().forEach(node => {
-      console.log('Node type:', node.getType());
-      
-      if ($isPaperCutSegmentNode(node)) {
-        console.log('Found segment node');
-        const segmentStartTime = node.getStartTime();
-        const segmentEndTime = node.getEndTime();
-        
-        const children = node.getChildren();
-        console.log('Segment children:', children);
-        
-        children.forEach(child => {
-          console.log('Child type:', child.getType());
-          
-          if ($isPaperCutWordNode(child)) {
-            console.log('Found word node:', {
-              text: child.getTextContent(),
-              fileId: child.getFileId()
-            });
-            
-            try {
-              const fileId = child.getFileId();
-              const fileName = files[fileId]?.name || 'unknown';
-              
-              wordNodes.push({
-                word: child.getTextContent(),
-                startTime: child.getStartTime(),
-                endTime: child.getEndTime(),
-                wordIndex: child.getWordIndex(),
-                segmentId: child.getSegmentId(),
-                segmentStartTime,
-                segmentEndTime,
-                speaker: child.getSpeaker(),
-                fileName,
-                fileId
-              });
-            } catch (error) {
-              console.error('Error processing word node:', error);
-            }
-          }
-        });
-      }
-    });
-  });
-  
-  console.log('Final word nodes:', wordNodes);
-  return wordNodes;
-};
+      processedItems.push(item);
+    } catch (error) {
+      console.error('Error parsing word data:', wordData, error);
+    }
+  }
 
-export const formatDragData = (node: any, files: Record<string, any>, segment: any): string => {
-  const fileName = files[node.getFileId()]?.name || 'unknown';
-  
-  const wordInfo = [
-    node.getTextContent(),
-    node.getStartTime(),
-    node.getEndTime(),
-    node.getWordIndex()
-  ].join(',');
+  return processedItems;
+}
 
-  const segmentInfo = [
-    node.getSegmentId(),
-    segment.getStartTime(),
-    segment.getEndTime(),
-    node.getSpeaker()
-  ].join(',');
-
-  const fileInfo = [
-    fileName,
-    node.getFileId()
-  ].join(',');
-
-  return [wordInfo, segmentInfo, fileInfo].join('|');
-};
-
-export const formatTime = (seconds: number): string => {
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = Math.floor(seconds % 60);
-  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-};
+export function formatWordMetadata(item: ContentItem): string {
+  return `${item.word}|${item.startTime},${item.endTime},${item.wordIndex}|${item.segmentId},${item.segmentStartTime},${item.segmentEndTime},${item.speaker}|${item.fileName},${item.fileId}`;
+}

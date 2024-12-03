@@ -2,7 +2,7 @@ import React from "react";
 import '@/styles/layout.css';
 import LeftPanel from "@/app/components/LeftPanel";
 import CenterPanel from "@/app/components/CenterPanel";
-import RightPanel from "@/app/components/RightPanel";
+import RightPanel from "@/app/components/RightPanel/RightPanel";
 import { useFormattedWords } from '@/app/contexts/FormattedWordsContext';
 
 export default function App() {

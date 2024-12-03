@@ -12,6 +12,7 @@ import { EditorState, LexicalEditor as LexicalEditorType, $getRoot,TextNode, Lex
 import { $createPaperCutWordNode, $isPaperCutWordNode, PaperCutWordNode } from '@/app/nodes/PaperCutWordNode';
 import { $isPaperCutSpeakerNode, PaperCutSpeakerNode } from '@/app/nodes/PaperCutSpeakerNode';
 import { $isPaperCutSegmentNode, PaperCutSegmentNode } from '@/app/nodes/PaperCutSegmentNode';
+import { $createPaperCutGroupNode, $isPaperCutGroupNode, PaperCutGroupNode } from '@/app/nodes/PaperCutGroupNode';
 import { WordHoverPlugin } from '@/app/plugins/WordHoverPlugin';
 import { EditRestrictionPlugin } from '@/app/plugins/EditRestrictionPlugin';
 import PaperCutToolbarPlugin from '@/app/plugins/PaperCutToolbarPlugin';
@@ -24,6 +25,7 @@ import '@/styles/papercutEditor.css';
 import { PaperCutCursorPlugin } from '@/app/plugins/PaperCutCursorPlugin';
 import { PaperCutCursorNode } from '@/app/nodes/PaperCutCursorNode';
 import PaperCutPastePlugin from '@/app/plugins/PaperCutPastePlugin';
+import { debounce } from 'lodash';
 
 interface LexicalEditorProps {
   initialState: string | null;
@@ -36,52 +38,83 @@ interface InitialStatePluginProps {
   tabId: string;
 }
 
+
 function InitialStatePlugin({ initialState, tabId }: InitialStatePluginProps): null {
   const [editor] = useLexicalComposerContext();
   
+  const debouncedSetState = useCallback(
+    debounce((stateObj: any) => {
+      editor.update(() => {
+        try {
+          const state = editor.parseEditorState(JSON.stringify(stateObj));
+          console.log('State parsed successfully');
+          editor.setEditorState(state);
+          console.log('State set successfully');
+          
+          const root = $getRoot();
+          console.log('Root after setting state:', root.getChildren());
+        } catch (parseError) {
+          console.error('Error parsing editor state:', parseError);
+        }
+      });
+    }, 300),
+    [editor]
+  );
+
   useEffect(() => {
     if (initialState) {
       try {
-        const stateObj = JSON.parse(initialState);
-        
+        let stateObj = JSON.parse(initialState);
+        console.log('Initial state parsed:', stateObj);
+
         const processNode = (node: any) => {
-          if (node.type === 'papercut-word') {
-            // Set all required properties for word nodes
-            node.fileId = tabId;
-            node.segmentId = node.segmentId || '';
-            node.speaker = node.speaker || '';
-            node.startTime = node.startTime || 0;
-            node.endTime = node.endTime || 0;
-            node.wordIndex = node.wordIndex || 0;
-          }
-          if (node.type === 'papercut-segment') {
-            // Ensure segment nodes have required properties
-            node.fileId = tabId;
-            node.speaker = node.speaker || '';
-            node.startTime = node.startTime || 0;
-            node.endTime = node.endTime || 0;
-            node.segmentId = node.segmentId || '';
-            node.isManualSplit = node.isManualSplit || false;
-          }
-          if (node.children) {
-            node.children.forEach(processNode);
+          try {
+            if (node.type === 'papercut-word') {
+              node.fileId = tabId;
+              node.segmentId = node.segmentId || '';
+              node.speaker = node.speaker || '';
+              node.startTime = node.startTime || 0;
+              node.endTime = node.endTime || 0;
+              node.wordIndex = node.wordIndex || 0;
+            }
+            if (node.children) {
+              node.children.forEach(processNode);
+            }
+          } catch (nodeError) {
+            console.error('Error processing node:', nodeError, node);
           }
         };
 
         if (stateObj.root?.children) {
+          console.log('Processing children:', stateObj.root.children);
           stateObj.root.children.forEach(processNode);
         }
 
-        const updatedState = editor.parseEditorState(JSON.stringify(stateObj));
-        editor.setEditorState(updatedState);
+        debouncedSetState(stateObj);
+
       } catch (error) {
-        console.error('Error parsing initial state:', error);
+        console.error('Error processing initial state:', error);
       }
+    } else {
+      // Create initial empty state
+      editor.update(() => {
+        const root = $getRoot();
+        const group = $createPaperCutGroupNode(
+          `group-initial-${Date.now()}`,
+          tabId,
+          0,
+          0,
+          ''
+        );
+        root.append(group);
+        console.log('Initial empty state created');
+      });
     }
-  }, [editor, initialState, tabId]);
+  }, [editor, initialState, tabId, debouncedSetState]);
 
   return null;
 }
+
 function AutoFocus(): null {
   const [editor] = useLexicalComposerContext();
   useEffect(() => {
@@ -172,6 +205,7 @@ function LexicalEditorComponent({ initialState, onChange, tabId }: LexicalEditor
       console.error('Lexical Editor Error:', errorMessage);
     },
     nodes: [
+      PaperCutGroupNode,
       PaperCutWordNode,
       PaperCutSpeakerNode,
       PaperCutSegmentNode,
