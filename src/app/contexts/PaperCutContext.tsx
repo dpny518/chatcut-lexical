@@ -1,6 +1,7 @@
 // src/app/contexts/PaperCutContext.tsx
 'use client'
-import React, { createContext, useContext, useState, useCallback, useRef } from 'react'
+
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react'
 import { useEditors } from '@/app/contexts/EditorContext'
 
 export type PaperCutType = 'file' | 'folder';
@@ -46,6 +47,7 @@ interface PaperCutContextType {
   getAllContents: (folderId: string) => string[];
   isAllContentsSelected: (folderId: string) => boolean;
   getTabByDisplayName: (displayName: string) => PaperCutTab | undefined;
+  getTabContent: (id: string) => ContentItem[] | null;
 }
 
 const PaperCutContext = createContext<PaperCutContextType | undefined>(undefined);
@@ -61,7 +63,7 @@ export const PaperCutProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [tabs, setTabs] = useState<{ [id: string]: PaperCutTab }>({});
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
   const { setActiveEditor } = useEditors();
-
+  const [tabContents, setTabContents] = useState<{ [id: string]: ContentItem[] }>({});
   const createTab = useCallback((name?: string, parentId: string | null = null) => {
     const id = generateId('papercut');
     const siblingTabs = Object.values(tabs).filter(t => t.parentId === parentId);
@@ -156,12 +158,7 @@ export const PaperCutProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }));
   }, []);
 
-  const updateTabContent = useCallback((id: string, newContent: ContentItem[]) => {
-    setTabs(prev => ({
-      ...prev,
-      [id]: { ...prev[id], editorState: newContent }
-    }));
-  }, []);
+
   const setActiveTab = useCallback((id: string) => {
     console.log('PaperCutContext: Setting active tab:', id);
     setTabs(prev => {
@@ -210,6 +207,36 @@ export const PaperCutProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const getTabs = useCallback(() => {
     return Object.values(tabs).sort((a, b) => a.order - b.order);
   }, [tabs]);
+  const updateTabContent = useCallback((id: string, newContent: ContentItem[]) => {
+    setTabContents(prev => ({
+      ...prev,
+      [id]: newContent
+    }));
+    setTabs(prev => ({
+      ...prev,
+      [id]: { ...prev[id], editorState: newContent }
+    }));
+  }, []);
+
+  const getTabContent = useCallback((id: string) => {
+    return tabContents[id] || null;
+  }, [tabContents]);
+
+  // Optionally, you can save the state to localStorage
+  useEffect(() => {
+    const savedState = JSON.stringify({ tabs, tabContents });
+    localStorage.setItem('paperCutState', savedState);
+  }, [tabs, tabContents]);
+
+  // Load state from localStorage on initial render
+  useEffect(() => {
+    const savedState = localStorage.getItem('paperCutState');
+    if (savedState) {
+      const { tabs: savedTabs, tabContents: savedContents } = JSON.parse(savedState);
+      setTabs(savedTabs);
+      setTabContents(savedContents);
+    }
+  }, []);
 
   const getAllContents = useCallback((folderId: string): string[] => {
     const contents: string[] = [];
@@ -258,6 +285,7 @@ export const PaperCutProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     getAllContents,
     isAllContentsSelected,
     getTabByDisplayName,
+    getTabContent,
   };
 
   return (

@@ -40,3 +40,39 @@
     background-color: var(--word-hover-bg); /* Apply word hover background */
   }
   
+  .block {
+    transition: transform 0.2s ease;
+  }
+  
+  .block:hover {
+    cursor: grab;
+  }
+  
+  .block:active {
+    cursor: grabbing;
+  }
+
+  .block {
+    transition: opacity 0.2s ease;
+  }
+  
+  .grab-handle {
+    transition: opacity 0.2s ease;
+  }
+  
+  .drop-indicator {
+    transition: opacity 0.2s ease, transform 0.2s ease;
+  }
+
+  .papercut-editor {
+    padding-bottom: 40px; /* Adjust as needed */
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }

@@ -1,15 +1,18 @@
 "use client"
 
-import React, { useState, useCallback, useRef, forwardRef, useImperativeHandle, useEffect } from 'react';
+import React, { useState, useEffect,useCallback, useRef, forwardRef, useImperativeHandle, useMemo } from 'react';
+
+
 import { cn } from "@/lib/utils";
 import { EditorBlock } from './EditorBlock';
 import { useEditorColors, useEditorHistory } from '@/hooks/useEditorHistory';
 import { parseClipboardData } from '@/app/utils/papercut-clipboard';
 import type { ContentItem, Block, CursorPosition, PapercutEditorRef, EditorState } from '@/app/types/papercut';
 import { handleClipboardCopy } from '@/app/utils/papercut-clipboard';
+import { usePaperCut } from '@/app/contexts/PaperCutContext';
+import { useActiveEditor } from '@/app/components/RightPanel/ActiveEditorContext';
+
 interface PapercutEditorProps {
-  content: ContentItem[];
-  onChange: (newContent: ContentItem[]) => void;
   tabId: string;
 }
 
@@ -62,27 +65,63 @@ const findParentBlock = (node: Node): HTMLElement | null => {
     return selectedElements;
   };
 
-const PapercutEditor = forwardRef<PapercutEditorRef, PapercutEditorProps>(({ content, onChange, tabId }, ref) => {
-  const [blocks, setBlocks] = useState<Block[]>([]);
-  const [isDragging, setIsDragging] = useState(false);
-  const [cursorPosition, setCursorPosition] = useState<CursorPosition | null>(null);
-  const [speakerColorIndices, setSpeakerColorIndices] = useState<Record<string, number>>({});
-  const editorRef = useRef<HTMLDivElement>(null);
+  const PapercutEditor = forwardRef<PapercutEditorRef, PapercutEditorProps>(({ tabId }, ref) => {
+    const { updateTabContent, getTabContent } = usePaperCut();
+    const content = getTabContent(tabId) || [];
+    
+    const [cursorPosition, setCursorPosition] = useState<CursorPosition | null>(null);
+    const [speakerColorIndices, setSpeakerColorIndices] = useState<Record<string, number>>({});
+    const [draggedBlockId, setDraggedBlockId] = useState<string | null>(null);
+    const [isDragging, setIsDragging] = useState(false);
+    const [isDraggingBelow, setIsDraggingBelow] = useState(false);
+    const [dropTarget, setDropTarget] = useState<{ blockId: string, position: 'above' | 'below' } | null>(null);
+    
+    const editorRef = useRef<HTMLDivElement>(null);
   
+    // Use useMemo to derive blocks from content
+    const blocks = useMemo(() => {
+      if (content.length === 0) return [];
+  
+      const newBlocks: Block[] = [];
+      let currentSpeaker = content[0].speaker;
+      let currentItems: ContentItem[] = [];
+  
+      content.forEach((item, index) => {
+        if (item.speaker !== currentSpeaker) {
+          newBlocks.push({
+            id: `block-${newBlocks.length}`,
+            items: currentItems,
+            speaker: currentSpeaker
+          });
+          currentItems = [];
+          currentSpeaker = item.speaker;
+        }
+        currentItems.push(item);
+      });
+  
+      if (currentItems.length > 0) {
+        newBlocks.push({
+          id: `block-${newBlocks.length}`,
+          items: currentItems,
+          speaker: currentSpeaker
+        });
+      }
+  
+      return newBlocks;
+    }, [content]);
+
+    
   const { generateColorForSpeaker } = useEditorColors();
   const { pushState, undo, redo } = useEditorHistory(
     { blocks, cursorPosition, speakerColorIndices },
     (state) => {
-      setBlocks(state.blocks);
-      setCursorPosition(state.cursorPosition);
-      setSpeakerColorIndices(state.speakerColorIndices);
-      
-      // Convert blocks back to ContentItem[] for onChange
+      // Instead of setting blocks directly, update the content
       const flatContent = state.blocks.reduce<ContentItem[]>((acc, block) => {
         return [...acc, ...block.items];
       }, []);
-      
-      onChange(flatContent);
+      updateTabContent(tabId, flatContent);
+      setCursorPosition(state.cursorPosition);
+      setSpeakerColorIndices(state.speakerColorIndices);
     }
   );
 
@@ -103,89 +142,33 @@ const PapercutEditor = forwardRef<PapercutEditorRef, PapercutEditorProps>(({ con
     try {
       const newItems = parseClipboardData(pastedText);
       if (!newItems?.length) return;
-
-      setBlocks(prevBlocks => {
-        // If no cursor position or no blocks, just append as new block
-        if (!cursorPosition || prevBlocks.length === 0) {
-          const newBlock = {
-            id: `block-${Date.now()}`,
-            items: newItems,
-            speaker: newItems[0].speaker
-          };
-          return [...prevBlocks, newBlock];
-        }
-
-        // Handle paste at cursor position
-        const blockIndex = prevBlocks.findIndex(b => b.id === cursorPosition.blockId);
-        if (blockIndex === -1) return prevBlocks;
-
-        const currentBlock = prevBlocks[blockIndex];
+  
+      let updatedContent: ContentItem[];
+  
+      if (!cursorPosition || blocks.length === 0) {
+        updatedContent = [...content, ...newItems];
+      } else {
+        const blockIndex = blocks.findIndex(b => b.id === cursorPosition.blockId);
+        if (blockIndex === -1) return;
+  
+        const currentBlock = blocks[blockIndex];
         const wordIndex = cursorPosition.wordIndex;
-        const newBlocks = [...prevBlocks];
-
-        // Split current block items
-        const beforeItems = currentBlock.items.slice(0, wordIndex);
-        const afterItems = currentBlock.items.slice(wordIndex);
-
-        // Group new items by speaker
-        const pastedBlocks: Block[] = [];
-        let currentSpeaker = newItems[0].speaker;
-        let currentItems: ContentItem[] = [];
-
-        newItems.forEach(item => {
-          if (item.speaker !== currentSpeaker) {
-            pastedBlocks.push({
-              id: `block-${Date.now()}-${currentSpeaker}`,
-              items: currentItems,
-              speaker: currentSpeaker
-            });
-            currentItems = [];
-            currentSpeaker = item.speaker;
-          }
-          currentItems.push(item);
-        });
-
-        if (currentItems.length > 0) {
-          pastedBlocks.push({
-            id: `block-${Date.now()}-${currentSpeaker}`,
-            items: currentItems,
-            speaker: currentSpeaker
-          });
-        }
-
-        // Handle splitting and merging of blocks
-        const finalBlocks: Block[] = [];
-        
-        if (beforeItems.length > 0) {
-          finalBlocks.push({
-            id: `block-${Date.now()}-before`,
-            items: beforeItems,
-            speaker: currentBlock.speaker
-          });
-        }
-        
-        finalBlocks.push(...pastedBlocks);
-        
-        if (afterItems.length > 0) {
-          finalBlocks.push({
-            id: `block-${Date.now()}-after`,
-            items: afterItems,
-            speaker: currentBlock.speaker
-          });
-        }
-
-        // Replace the current block with the new blocks
-        newBlocks.splice(blockIndex, 1, ...finalBlocks);
-
-        return newBlocks;
-      });
+  
+        updatedContent = [
+          ...content.slice(0, blocks.slice(0, blockIndex).reduce((sum, b) => sum + b.items.length, 0) + wordIndex),
+          ...newItems,
+          ...content.slice(blocks.slice(0, blockIndex).reduce((sum, b) => sum + b.items.length, 0) + wordIndex)
+        ];
+      }
+  
+      updateTabContent(tabId, updatedContent);
     } catch (error) {
       console.error('Error handling paste:', error);
     }
-  }, [cursorPosition]);
+  }, [cursorPosition, blocks, content, updateTabContent, tabId]);
 
 
-const handleKeyDown = useCallback((event: React.KeyboardEvent) => {
+  const handleKeyDown = useCallback((event: React.KeyboardEvent) => {
     if ((event.ctrlKey || event.metaKey) && event.key === 'z') {
       event.preventDefault();
       if (event.shiftKey) {
@@ -199,39 +182,28 @@ const handleKeyDown = useCallback((event: React.KeyboardEvent) => {
     if (event.key === 'Enter' && cursorPosition) {
       event.preventDefault();
       
-      setBlocks(prevBlocks => {
-        const blockIndex = prevBlocks.findIndex(b => b.id === cursorPosition.blockId);
-        if (blockIndex === -1) return prevBlocks;
-
-        const currentBlock = prevBlocks[blockIndex];
-        const wordIndex = cursorPosition.wordIndex;
-
-        const firstHalf = {
-          ...currentBlock,
-          id: `block-${Date.now()}-1`,
-          items: currentBlock.items.slice(0, wordIndex)
-        };
-
-        const secondHalf = {
-          ...currentBlock,
-          id: `block-${Date.now()}-2`,
-          items: currentBlock.items.slice(wordIndex)
-        };
-
-        const newBlocks = [...prevBlocks];
-        newBlocks.splice(blockIndex, 1, firstHalf, secondHalf);
-        
-        setCursorPosition({
-          blockId: secondHalf.id,
-          wordIndex: 0
-        });
-
-        return newBlocks;
+      const blockIndex = blocks.findIndex(b => b.id === cursorPosition.blockId);
+      if (blockIndex === -1) return;
+  
+      const currentBlock = blocks[blockIndex];
+      const wordIndex = cursorPosition.wordIndex;
+  
+      const updatedContent = [
+        ...content.slice(0, blocks.slice(0, blockIndex).reduce((sum, b) => sum + b.items.length, 0) + wordIndex),
+        { ...content[blocks.slice(0, blockIndex).reduce((sum, b) => sum + b.items.length, 0) + wordIndex], word: '\n' },
+        ...content.slice(blocks.slice(0, blockIndex).reduce((sum, b) => sum + b.items.length, 0) + wordIndex)
+      ];
+  
+      updateTabContent(tabId, updatedContent);
+      
+      setCursorPosition({
+        blockId: blocks[blockIndex + 1]?.id || currentBlock.id,
+        wordIndex: 0
       });
     } else if (!(event.ctrlKey || event.metaKey)) {
       event.preventDefault();
     }
-  }, [cursorPosition, undo, redo]);
+  }, [cursorPosition, blocks, content, undo, redo, updateTabContent, tabId]);
 
   const handleWordClick = useCallback((blockId: string, wordIndex: number) => {
     setCursorPosition({ blockId, wordIndex });
@@ -251,86 +223,30 @@ const handleKeyDown = useCallback((event: React.KeyboardEvent) => {
     return () => document.removeEventListener('copy', handleCopy);
   }, [handleCopy]);
 
-  // Initialize blocks from content prop
-  useEffect(() => {
-    if (content.length > 0) {
-      const newBlocks: Block[] = [];
-      let currentSpeaker = content[0].speaker;
-      let currentItems: ContentItem[] = [];
-
-      content.forEach((item, index) => {
-        if (item.speaker !== currentSpeaker) {
-          newBlocks.push({
-            id: `block-${Date.now()}-${index}`,
-            items: currentItems,
-            speaker: currentSpeaker
-          });
-          currentItems = [];
-          currentSpeaker = item.speaker;
-        }
-        currentItems.push(item);
-      });
-
-      if (currentItems.length > 0) {
-        newBlocks.push({
-          id: `block-${Date.now()}-${content.length}`,
-          items: currentItems,
-          speaker: currentSpeaker
-        });
-      }
-
-      setBlocks(newBlocks);
-    }
-  }, [content]);
-
   // Expose methods through ref
   useImperativeHandle(ref, () => ({
     addContentAtEnd: (clipboardData: string) => {
       const newItems = parseClipboardData(clipboardData);
       if (!newItems?.length) return;
 
-      setBlocks(prevBlocks => {
-        const newBlock = {
-          id: `block-${Date.now()}`,
-          items: newItems,
-          speaker: newItems[0].speaker
-        };
-        return [...prevBlocks, newBlock];
-      });
+      const updatedContent = [...content, ...newItems];
+      updateTabContent(tabId, updatedContent);
     },
     addContentAtCursor: (clipboardData: string) => {
       const newItems = parseClipboardData(clipboardData);
       if (!newItems?.length) return;
 
-      setBlocks(prevBlocks => {
-        if (!cursorPosition || prevBlocks.length === 0) {
-          const newBlock = {
-            id: `block-${Date.now()}`,
-            items: newItems,
-            speaker: newItems[0].speaker
-          };
-          return [...prevBlocks, newBlock];
-        }
-
-        const blockIndex = prevBlocks.findIndex(b => b.id === cursorPosition.blockId);
-        if (blockIndex === -1) return prevBlocks;
-
-        const currentBlock = prevBlocks[blockIndex];
-        const wordIndex = cursorPosition.wordIndex;
-        const newBlocks = [...prevBlocks];
-
-        const updatedBlock = {
-          ...currentBlock,
-          items: [
-            ...currentBlock.items.slice(0, wordIndex),
-            ...newItems,
-            ...currentBlock.items.slice(wordIndex)
-          ]
-        };
-
-        newBlocks[blockIndex] = updatedBlock;
-        return newBlocks;
-      });
+      if (!cursorPosition || content.length === 0) {
+        const updatedContent = [...content, ...newItems];
+        updateTabContent(tabId, updatedContent);
+      } else {
+        const updatedContent = [
+          ...content.slice(0, cursorPosition.wordIndex),
+          ...newItems,
+          ...content.slice(cursorPosition.wordIndex)
+        ];
+        updateTabContent(tabId, updatedContent);
+      }
     },
     getCurrentState: () => ({
       blocks,
@@ -338,11 +254,69 @@ const handleKeyDown = useCallback((event: React.KeyboardEvent) => {
       speakerColorIndices
     }),
     restoreState: (state: EditorState) => {
-      setBlocks(state.blocks);
+      const flatContent = state.blocks.reduce<ContentItem[]>((acc, block) => {
+        return [...acc, ...block.items];
+      }, []);
+      updateTabContent(tabId, flatContent);
       setCursorPosition(state.cursorPosition);
       setSpeakerColorIndices(state.speakerColorIndices);
     }
-  }), [blocks, cursorPosition, speakerColorIndices]);
+  }), [blocks, cursorPosition, speakerColorIndices, content, tabId, updateTabContent]);
+
+
+
+  const handleDragStart = useCallback((blockId: string) => {
+    setDraggedBlockId(blockId);
+    setIsDragging(true);
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const editorRect = editorRef.current?.getBoundingClientRect();
+    if (editorRect) {
+      const mouseY = e.clientY;
+      if (mouseY > editorRect.bottom - 20) { // 20px threshold for bottom area
+        setIsDraggingBelow(true);
+        setDropTarget(null);
+      } else {
+        setIsDraggingBelow(false);
+      }
+    }
+  }, []);
+
+  const handleDragEnd = useCallback(() => {
+    if (draggedBlockId) {
+      const updatedContent = blocks.reduce<ContentItem[]>((acc, block) => {
+        if (block.id === draggedBlockId) {
+          // Skip the dragged block for now
+          return acc;
+        }
+        return [...acc, ...block.items];
+      }, []);
+  
+      const draggedBlock = blocks.find(block => block.id === draggedBlockId);
+      if (!draggedBlock) return;
+  
+      if (isDraggingBelow) {
+        // If dragging below all blocks, append to the end
+        updatedContent.push(...draggedBlock.items);
+      } else if (dropTarget) {
+        const targetBlockIndex = blocks.findIndex(b => b.id === dropTarget.blockId);
+        if (targetBlockIndex !== -1) {
+          const insertIndex = dropTarget.position === 'below' 
+            ? blocks.slice(0, targetBlockIndex + 1).reduce((sum, b) => sum + b.items.length, 0)
+            : blocks.slice(0, targetBlockIndex).reduce((sum, b) => sum + b.items.length, 0);
+          updatedContent.splice(insertIndex, 0, ...draggedBlock.items);
+        }
+      }
+  
+      updateTabContent(tabId, updatedContent);
+    }
+    setDraggedBlockId(null);
+    setDropTarget(null);
+    setIsDragging(false);
+    setIsDraggingBelow(false);
+  }, [draggedBlockId, dropTarget, isDraggingBelow, blocks, updateTabContent, tabId]);
 
   return (
     <div 
@@ -350,22 +324,14 @@ const handleKeyDown = useCallback((event: React.KeyboardEvent) => {
       contentEditable
       onPaste={handlePaste}
       onKeyDown={handleKeyDown}
+      onDragOver={handleDragOver}
       className={cn(
         "min-h-[300px] border-border rounded-lg p-4 overflow-y-auto focus:outline-none",
-        "bg-background text-foreground",
-        isDragging ? "cursor-grabbing" : "cursor-grab"
+        "bg-background text-foreground"
       )}
       suppressContentEditableWarning
       spellCheck={false}
-      onMouseDown={() => setIsDragging(true)}
-      onMouseUp={() => setIsDragging(false)}
-      onMouseLeave={() => setIsDragging(false)}
     >
-      {blocks.length === 0 && (
-        <div className="text-muted-foreground pointer-events-none">
-          Paste transcript data here...
-        </div>
-      )}
       {blocks.map((block) => (
         <EditorBlock
           key={block.id}
@@ -373,11 +339,27 @@ const handleKeyDown = useCallback((event: React.KeyboardEvent) => {
           colors={getColorForSpeaker(block.speaker)}
           cursorPosition={cursorPosition}
           onWordClick={handleWordClick}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          onDragOver={(blockId, position) => {
+            if (blockId !== draggedBlockId) {
+              setDropTarget({ blockId, position });
+              setIsDraggingBelow(false);
+            }
+          }}
+          isDragging={draggedBlockId === block.id}
+          isDropTarget={dropTarget?.blockId === block.id}
+          dropPosition={dropTarget?.blockId === block.id ? dropTarget.position : null}
         />
       ))}
+      {/* Drop zone below all blocks */}
+      {isDraggingBelow && (
+        <div className="h-1 bg-blue-500 mt-2" />
+      )}
     </div>
   );
 });
+
 
 PapercutEditor.displayName = 'PapercutEditor';
 

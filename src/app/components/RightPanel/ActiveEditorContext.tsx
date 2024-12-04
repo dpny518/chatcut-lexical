@@ -1,7 +1,7 @@
 "use client"
 
-import React, { createContext, useContext, useCallback, useState, useRef } from 'react';
-import { PapercutEditorRef } from '@/app/types/papercut';
+import React, { createContext, useContext, useState, useRef, useCallback } from 'react';
+import type { PapercutEditorRef } from '@/app/types/papercut';
 
 interface ActiveEditorContextType {
   activeEditorId: string | null;

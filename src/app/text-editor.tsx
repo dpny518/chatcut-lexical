@@ -24,6 +24,7 @@ import { WordNode } from "./nodes/WordNode";
 import { SegmentNode } from "./nodes/SegmentNode";
 import { SpeakerNode } from "./nodes/SpeakerNode";
 import EditorContent from "./editorcontent";
+import type { PaperCutOperations } from '@/app/types/papercut';
 
 import { useEditorContent } from "@/app/contexts/EditorContentContext";
 import { useFileSystem } from "@/app/contexts/FileSystemContext";
@@ -37,7 +38,11 @@ function Placeholder() {
     return <div className="editor-placeholder">Upload and Select Some Transcripts.</div>;
 }
 
-  interface CurrentFileIndicatorProps {
+interface EditorProps {
+    paperCutOperations: PaperCutOperations;
+  }
+
+interface CurrentFileIndicatorProps {
     selectedFileIds: string[];
     files: Record<string, { name: string }>;
   }
@@ -114,7 +119,8 @@ const editorConfig = {
     ],
 };
 
-export function Editor(): JSX.Element | null {
+export function Editor({ paperCutOperations }: EditorProps): JSX.Element | null {
+    const { hasActiveEditor, addToPaperCut, insertIntoPaperCut } = paperCutOperations;
     const [isMounted, setIsMounted] = useState(false);
     const [currentFile, setCurrentFile] = useState<string | null>(null);
     const { selectedFileIds } = useEditorContent();

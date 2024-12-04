@@ -1,3 +1,7 @@
+
+import { usePaperCutOperations } from '@/app/components/RightPanel/ActiveEditorContext';
+
+export type PaperCutOperations = ReturnType<typeof usePaperCutOperations>;
 export interface ContentItem {
     word: string;
     startTime: number;

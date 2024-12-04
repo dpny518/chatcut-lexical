@@ -12,9 +12,27 @@ interface EditorBlockProps {
   colors: SpeakerColor;
   cursorPosition: CursorPosition | null;
   onWordClick: (blockId: string, wordIndex: number) => void;
+  onDragStart: (blockId: string) => void;
+  onDragEnd: () => void;
+  onDragOver: (blockId: string, position: 'above' | 'below') => void;
+  isDragging: boolean;
+  isDropTarget: boolean;
+  dropPosition: 'above' | 'below' | null;
 }
 
-export const EditorBlock = memo(({ block, colors, cursorPosition, onWordClick }: EditorBlockProps) => {
+
+export const EditorBlock = memo(({ 
+    block, 
+    colors, 
+    cursorPosition, 
+    onWordClick, 
+    onDragStart, 
+    onDragEnd, 
+    onDragOver,
+    isDragging,
+    isDropTarget,
+    dropPosition
+  }: EditorBlockProps) => {
   const [tooltipContent, setTooltipContent] = useState<string | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout>>();
@@ -66,7 +84,29 @@ export const EditorBlock = memo(({ block, colors, cursorPosition, onWordClick }:
   } as React.CSSProperties;
 
   return (
-    <div ref={blockRef} className="relative">
+    <div 
+      ref={blockRef} 
+      className={cn(
+        "relative",
+        isDragging && "opacity-50",
+        isDropTarget && "z-10"
+      )}
+      draggable
+      onDragStart={() => onDragStart(block.id)}
+      onDragEnd={onDragEnd}
+      onDragOver={(e) => {
+        e.preventDefault();
+        const rect = blockRef.current?.getBoundingClientRect();
+        if (rect) {
+          const mouseY = e.clientY;
+          const blockMiddle = rect.top + rect.height / 2;
+          onDragOver(block.id, mouseY < blockMiddle ? 'above' : 'below');
+        }
+      }}
+    >
+      {isDropTarget && dropPosition === 'above' && (
+        <div className="absolute top-0 left-0 right-0 h-1 bg-blue-500" />
+      )}
       <div 
         data-block={block.id}
         className="block speaker"

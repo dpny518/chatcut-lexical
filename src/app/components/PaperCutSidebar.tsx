@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useCallback, DragEvent } from 'react';
+import React, { useState, useCallback, DragEvent,useMemo } from 'react';
 import { FileText, Folder, ChevronRight, ChevronDown, Plus, Trash2, Edit2 } from 'lucide-react';
 import { usePaperCut } from '@/app/contexts/PaperCutContext';
 import { useEditorContent } from '@/app/contexts/EditorContentContext';
@@ -15,7 +15,7 @@ interface Props {
   forceUpdate: () => void;
 }
 
-const PaperCutTree: React.FC<{ parentId: string | null; forceUpdate: () => void }> = ({ parentId, forceUpdate }) => {
+const PaperCutTree: React.FC<{ parentId: string | null }> = ({ parentId }) => {
   const { 
     getTabs, 
     setActiveTab,
@@ -106,10 +106,12 @@ const PaperCutTree: React.FC<{ parentId: string | null; forceUpdate: () => void 
     }
   }, [getTabs, setPaperCutSelectedIds, paperCutLastSelectedId, setPaperCutLastSelectedId, parentId, setActiveTab, reopenTab]);
 
-  const items = getTabs()
-    .filter(tab => tab.parentId === parentId)
-    .sort((a, b) => a.order - b.order);
-
+  const items = useMemo(() => 
+    getTabs()
+      .filter(tab => tab.parentId === parentId)
+      .sort((a, b) => a.order - b.order),
+    [getTabs, parentId]
+  );
   const handleDragStart = (e: DragEvent<HTMLDivElement>, id: string) => {
     e.dataTransfer.setData('text/plain', id);
     e.dataTransfer.effectAllowed = 'move';
@@ -178,10 +180,9 @@ const PaperCutTree: React.FC<{ parentId: string | null; forceUpdate: () => void 
       updateTabName(itemId, newName.trim());
       setEditingItemId(null);
       setNewName('');
-      forceUpdate();
     }
   };
-
+  
   const handleCreateFolder = () => {
     if (newName.trim()) {
       createFolder(newName.trim(), parentId);
@@ -253,8 +254,8 @@ const PaperCutTree: React.FC<{ parentId: string | null; forceUpdate: () => void 
           </div>
           
           {item.type === 'folder' && openFolders.has(item.id) && (
-            <PaperCutTree parentId={item.id} forceUpdate={forceUpdate} />
-          )}
+  <PaperCutTree parentId={item.id} />
+)}
         </React.Fragment>
       ))}
 
@@ -285,11 +286,11 @@ const PaperCutTree: React.FC<{ parentId: string | null; forceUpdate: () => void 
   );
 };
 
-export const PaperCutSidebar: React.FC<Props> = ({ forceUpdate }) => {
+export const PaperCutSidebar: React.FC = () => {
   return (
     <div className="p-4 space-y-2">
       <h3 className="text-sm font-medium mb-3">PaperCuts</h3>
-      <PaperCutTree parentId={null} forceUpdate={forceUpdate} />
+      <PaperCutTree parentId={null} />
     </div>
   );
 };
