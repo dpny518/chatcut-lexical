@@ -1,166 +1,79 @@
+/* Base container */
 .editor-container {
-  @apply m-2.5 w-full relative leading-5 font-normal text-left bg-card text-foreground rounded-md border border-border;
+  @apply w-full relative;
+  background-color: #0F0F0F; /* Matched darker background */
 }
 
 .editor-inner {
-  @apply bg-card relative p-2.5;
+  @apply relative p-4;
+  background-color: #0F0F0F;
 }
 
 .editor-input {
-  @apply min-h-[150px] resize-none text-[14px] relative outline-none p-4 caret-foreground text-foreground bg-muted font-mono;
-  tab-size: 1;
+  @apply resize-none outline-none font-mono;
+  background-color: #0F0F0F;
+  color: rgba(255, 255, 255, 0.95); /* Slightly off-white text */
+  letter-spacing: 0.05em;
+  word-spacing: 0.5em;
 }
 
-.editor-toolbar {
-  @apply px-4 py-2 flex items-center gap-2;
-  height: 4rem;
-}
-
-.editor-file-indicator {
-  @apply flex items-center gap-2 px-4 py-2 bg-muted/10 border-b border-border;
-}
-
-/* Timestamps */
-.editor-timestamp {
-  @apply text-muted-foreground text-sm font-mono mr-2;
-}
-
-/* Speaker labels */
+/* Speaker styling - exact match to blue in screenshot */
+/* Speaker styling */
 .editor-speaker {
-  @apply text-sky-400 font-semibold mb-1;
+  color: #4BA2FF !important;
+  font-weight: 400;
+  font-size: 16px;
 }
 
-/* Individual paragraphs/segments */
-.editor-paragraph {
-  @apply m-0 mb-6 relative border-l-2 border-muted/20 pl-4;
+/* Timestamp styling */
+.editor-timestamp {
+  color: #666666;
+  font-family: monospace;
+  font-size: 14px;
 }
 
-/* Toolbar area */
-.editor-toolbar {
-  @apply bg-card/50 border-b border-border px-4 py-2 flex items-center gap-2;
+/* Speaker line container */
+.editor-speaker-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 
-/* File indicator */
-.editor-file-indicator {
-  @apply flex items-center gap-2 px-4 py-2 bg-muted/10 border-b border-border;
+/* Text content */
+[data-lexical-text] {
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 16px;
+  line-height: 1.6;
+  letter-spacing: 0.05em;
+  word-spacing: 0.5em;
+}
+
+/* Selected/highlighted words */
+[data-word-metadata] {
+  padding: 2px 4px;
+  border-radius: 2px;
+  margin: 0 2px;
+  transition: background-color 0.15s ease;
 }
 
 /* Selection styling */
 ::selection {
-  @apply bg-primary/20 text-foreground;
+  background-color: rgba(138, 180, 248, 0.25);
 }
 
-.editor-placeholder {
-  @apply text-muted-foreground overflow-hidden absolute text-ellipsis top-4 left-2.5 text-[15px] select-none inline-block pointer-events-none;
+/* Font settings */
+.editor-input, 
+[data-lexical-text] {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
-.editor-heading-h1 {
-  @apply text-2xl text-foreground font-bold my-2.5;
+/* Hide scrollbar */
+.editor-inner {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
-.editor-heading-h2 {
-  @apply text-xl text-foreground font-bold my-2.5;
-}
-
-.editor-heading-h3 {
-  @apply text-lg text-foreground font-bold my-2.5;
-}
-
-.editor-heading-h4 {
-  @apply text-base text-foreground font-bold my-2.5;
-}
-
-.editor-heading-h5 {
-  @apply text-sm text-foreground font-bold my-2.5;
-}
-
-.editor-list-ol,
-.editor-list-ul {
-  @apply p-0 m-0 ml-4;
-}
-
-.editor-listitem {
-  @apply my-2 mx-8;
-}
-
-.editor-nested-listitem {
-  @apply list-none;
-}
-
-.editor-link {
-  @apply text-primary no-underline;
-}
-
-.editor-text-bold {
-  @apply font-bold;
-}
-
-.editor-text-italic {
-  @apply italic;
-}
-
-.editor-text-underline {
-  @apply underline;
-}
-
-.editor-text-strikethrough {
-  @apply line-through;
-}
-
-.editor-text-underlineStrikethrough {
-  @apply underline line-through;
-}
-
-.editor-text-code {
-  @apply bg-muted p-px px-0.5 font-mono rounded;
-}
-
-.editor-code {
-  @apply bg-card font-mono block p-2 my-2 overflow-x-auto relative;
-  tab-size: 2;
-}
-
-.editor-tokenComment {
-  @apply text-muted-foreground;
-}
-
-.editor-tokenPunctuation,
-.editor-tokenOperator {
-  @apply text-foreground;
-}
-
-.editor-tokenProperty,
-.editor-tokenVariable {
-  @apply text-sky-300;
-}
-
-.editor-tokenSelector {
-  @apply text-amber-300;
-}
-
-.editor-tokenAttr {
-  @apply text-emerald-300;
-}
-
-.editor-tokenFunction {
-  @apply text-yellow-200;
-}
-
-.editor-quote {
-  @apply m-0 ml-5 italic text-muted-foreground border-l-muted-foreground;
-}
-
-.papercut-editor {
-  padding: 1rem;
-  background-color: var(--editor-bg);
-  color: var(--editor-text);
-  border-radius: var(--radius);
-  overflow-y: auto;
-  max-height: 100%;
-}
-
-.papercut-editor div {
-  margin-bottom: 0.5rem;
-  padding: 0.5rem;
-  border-radius: var(--radius);
+.editor-inner::-webkit-scrollbar {
+  display: none;
 }

@@ -130,9 +130,9 @@ export const EditorBlock = memo(({
           </button>
         </div>
         <div className="px-3 py-2">
-          <h3 className="speaker-text mb-2 select-none font-medium text-sm">
-            Speaker {block.speaker}
-          </h3>
+        <h3 className="speaker-text mb-2 select-none font-medium text-sm text-[#5EA5FF]">
+  Speaker {block.speaker}
+</h3>
           <div className="leading-relaxed text-sm font-mono" role="list">
           {block.items.map((item, index) => (
                     <span

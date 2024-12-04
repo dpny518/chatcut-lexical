@@ -29,8 +29,12 @@ const exampleTheme = {
     underline: "editor-text-underline",
     strikethrough: "editor-text-strikethrough",
     underlineStrikethrough: "editor-text-underlineStrikethrough",
-    code: "editor-text-code"
+    code: "editor-text-code",
+    speaker: "editor-speaker"  // Added this line
   },
+  // Added speaker specific styling
+  speaker: "editor-speaker",
+  timestamp: "editor-timestamp",
   code: "editor-code",
   codeHighlight: {
     atrule: "editor-tokenAttr",

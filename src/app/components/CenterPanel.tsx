@@ -9,10 +9,12 @@ export default function CenterPanel() {
   const paperCutOperations = usePaperCutOperations();
 
   return (
-    <main className="flex-1 h-full bg-gray-900 text-gray-200">
-      <div className="max-w-3xl mx-auto py-8">
-        <div className="p-6 bg-gray-800 rounded shadow-md">
-          <h2 className="text-xl font-semibold">Source</h2>
+    <main className="flex-1 h-full flex flex-col bg-[#0F0F0F]">
+      <div className="flex-1 flex flex-col">
+        <div className="bg-[#161616] px-6 py-4 border-b border-[#2A2A2A]">
+          <h2 className="text-[#E1E1E1] text-lg">Source</h2>
+        </div>
+        <div className="flex-1">
           <FormattedWordsProvider>
             <Editor paperCutOperations={paperCutOperations} />
           </FormattedWordsProvider>
