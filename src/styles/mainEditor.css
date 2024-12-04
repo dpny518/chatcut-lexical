@@ -1,61 +1,77 @@
 /* Base container */
 .editor-container {
   @apply w-full relative;
-  background-color: #0F0F0F;
+  background-color: #0A0A0A; /* Slightly darker background */
 }
 
 .editor-inner {
-  @apply relative p-4;
-  background-color: #0F0F0F;
+  @apply relative px-6 py-4;
+  background-color: #0A0A0A;
 }
 
 .editor-input {
   @apply resize-none outline-none;
-  background-color: #0F0F0F;
+  background-color: #0A0A0A;
   color: #E1E1E1;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 14px;
-  letter-spacing: 0.05em;
-  word-spacing: 0.5em;
   line-height: 1.6;
 }
 
 /* Timestamp and speaker line */
+.timestamp-speaker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
 .editor-timestamp {
   color: #666666;
   font-family: ui-monospace, monospace;
   font-size: 14px;
+  user-select: none;
 }
 
 .editor-speaker {
   color: #4BA2FF;
-  font-weight: normal;
+  font-size: 14px;
+  font-family: ui-monospace, monospace;
 }
 
-/* Add colon after speaker name */
-.editor-speaker::after {
-  content: ":";
-  color: #4BA2FF;
+/* Each word in the content */
+[data-word-metadata] {
+  display: inline-block;
+  padding: 0 4px;
+  margin: 0 1px;
+  border-radius: 2px;
+  transition: background-color 0.15s ease;
 }
 
-/* Individual segments/paragraphs */
+[data-word-metadata]:hover {
+  background-color: rgba(75, 162, 255, 0.1);
+}
+
+/* Paragraph spacing */
 .editor-paragraph {
   margin: 24px 0;
-  padding-left: 0;
+  padding: 0;
+  line-height: 1.6;
 }
 
-/* Text content */
+/* Content text */
 [data-lexical-text] {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 14px;
-  line-height: 1.6;
-  letter-spacing: 0.05em;
-  word-spacing: 0.5em;
+  padding: 0 2px;
+  letter-spacing: 0;
+  word-spacing: 6px;
 }
 
 /* Selection styling */
 ::selection {
-  background-color: rgba(94, 165, 255, 0.2);
+  background-color: rgba(75, 162, 255, 0.2);
+  color: #E1E1E1;
 }
 
 /* Hide scrollbar */
@@ -68,13 +84,12 @@
   display: none;
 }
 
-/* Toolbar styling */
-.editor-toolbar {
-  @apply fixed bottom-0 left-[16rem] right-[600px] border-t border-[#2A2A2A] bg-[#0F0F0F]/80 backdrop-blur;
-  padding: 8px 16px;
-}
-
-/* File indicator */
-.editor-file-indicator {
-  @apply flex items-center gap-2 px-4 py-2 bg-[#161616] border-b border-[#2A2A2A];
+/* Source header */
+.source-header {
+  padding: 16px 24px;
+  background-color: #161616;
+  border-bottom: 1px solid #2A2A2A;
+  color: #E1E1E1;
+  font-size: 16px;
+  font-weight: 500;
 }
