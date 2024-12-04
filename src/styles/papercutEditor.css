@@ -1,89 +1,42 @@
-/* Container */
-.papercut-editor-container {
-    position: relative;
-    padding: 12px;
-    border: 1px solid #e2e2e2;
-    background-color: #fff;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-}
+/* Base styling for speaker elements */
+.speaker {
+    background-color: var(--bg); /* Use the main background color */
+    border-left: 4px solid var(--edgeLine); /* Distinct left edge line for each speaker */
+    padding: 10px; /* Add some padding for content spacing */
+    margin-bottom: 10px; /* Optional: Add spacing between speaker elements */
+    transition: background-color 0.3s ease, border-color 0.3s ease; /* Smooth transition */
+  }
   
-/* Input area */
-.papercut-editor-container .papercut-editor-input {
-    flex: 1;
-    min-height: 0;
-    padding: 12px;
-    padding-left: 48px; /* Added left padding for draggable blocks */
-    outline: none;
-    background-color: #fff;
-    caret-color: black;
-    overflow-y: auto;
-    overflow-x: hidden;
-    word-wrap: break-word;
-    word-break: break-word;
-    white-space: pre-wrap;
-}
+  /* Hover state */
+  .speaker:hover {
+    background-color: var(--blockHover); /* Highlight the block on hover */
+    border-left-color: var(--wordHover); /* Slightly emphasize the edge on hover */
+  }
   
-/* Content elements */
-.papercut-editor-container .timestamp-wrapper {
-    display: inline-block;
-    margin-right: 8px;
-    color: #666;
-    font-size: 14px;
-}
+  /* Optional: Text styling */
+  .speaker-text {
+    color: var(--textDark); /* Default text color */
+  }
   
-.papercut-editor-container .segment-timestamp {
-    font-family: Menlo, Monaco, "Courier New", monospace;
-}
+  .speaker:hover .speaker-text {
+    color: var(--textLight); /* Adjust text color on hover */
+  }
   
-.papercut-editor-container .speaker-wrapper {
-    display: inline-block;
-    margin-right: 8px;
-}
+  /* Adjusted CSS */
+.block {
+    border-left: 4px solid var(--edge-line-color); /* Dynamically apply edgeLine */
+  }
   
-.papercut-editor-container .speaker-label {
-    font-weight: 600;
-    color: #000;
-}
+  .block:hover {
+    background-color: var(--block-hover-bg); /* Use the block hover background */
+  }
   
-.papercut-editor-container .papercut-word {
-    display: inline-block;
-    margin-right: 4px;
-    font-size: 14px;
-}
+  .word {
+    background-color: var(--bg); /* Keep text background tied to the block's base color */
+    border-radius: 4px;          /* Make the text visually distinct */
+  }
   
-.papercut-editor-container .papercut-word:hover {
-    background-color: #f0f0f0;
-}
+  .word:hover {
+    background-color: var(--word-hover-bg); /* Apply word hover background */
+  }
   
-/* Cursor */
-.papercut-editor-container .papercut-cursor {
-    display: inline-block !important;
-    width: 2px !important;
-    height: 1.2em !important;
-    vertical-align: text-bottom !important;
-    background-color: black !important;
-    animation: blink 1s infinite !important;
-    pointer-events: none !important;
-    z-index: 100 !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    font-weight: bold;
-    color: black;
-}
-  
-@keyframes blink {
-    0%, 100% { opacity: 0; }
-    50% { opacity: 1; }
-}
-  
-/* Placeholder */
-.papercut-editor-placeholder {
-    color: #aaa;
-    position: absolute;
-    top: 45%;
-    left: 60px; /* Adjusted left position to match the input padding */
-    transform: translateY(-50%);
-    font-style: italic;
-}

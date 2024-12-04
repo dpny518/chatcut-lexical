@@ -1,43 +1,79 @@
 "use client"
-import React, { createContext, useContext, useState, useCallback, ReactNode, useRef } from 'react';
-import { PapercutEditorRef } from './PapercutEditor';
+
+import React, { createContext, useContext, useCallback, useState, useRef } from 'react';
+import { PapercutEditorRef } from '@/app/types/papercut';
 
 interface ActiveEditorContextType {
   activeEditorId: string | null;
-  setActiveEditor: (editorId: string) => void;
+  editors: Record<string, PapercutEditorRef>;
+  setActiveEditor: (id: string) => void;
+  registerEditor: (id: string, ref: PapercutEditorRef) => void;
+  unregisterEditor: (id: string) => void;
   getActivePaperCutEditor: () => PapercutEditorRef | null;
-  registerEditor: (editorId: string, editorRef: PapercutEditorRef) => void;
+  hasActiveEditor: () => boolean;
+  addToPaperCut: (content: string) => void;
+  insertIntoPaperCut: (content: string) => void;
 }
 
-const ActiveEditorContext = createContext<ActiveEditorContextType | undefined>(undefined);
+const ActiveEditorContext = createContext<ActiveEditorContextType>({
+  activeEditorId: null,
+  editors: {},
+  setActiveEditor: () => {},
+  registerEditor: () => {},
+  unregisterEditor: () => {},
+  getActivePaperCutEditor: () => null,
+  hasActiveEditor: () => false,
+  addToPaperCut: () => {},
+  insertIntoPaperCut: () => {},
+});
 
-interface ActiveEditorProviderProps {
-  children: ReactNode;
-}
-
-export const ActiveEditorProvider: React.FC<ActiveEditorProviderProps> = ({ children }) => {
+export const ActiveEditorProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [activeEditorId, setActiveEditorId] = useState<string | null>(null);
   const editorsRef = useRef<Record<string, PapercutEditorRef>>({});
 
-  const setActiveEditor = useCallback((editorId: string) => {
-    setActiveEditorId(editorId);
+  const registerEditor = useCallback((id: string, ref: PapercutEditorRef) => {
+    editorsRef.current[id] = ref;
   }, []);
 
-  const registerEditor = useCallback((editorId: string, editorRef: PapercutEditorRef) => {
-    console.log('Registering editor:', editorId);
-    editorsRef.current[editorId] = editorRef;
+  const unregisterEditor = useCallback((id: string) => {
+    delete editorsRef.current[id];
   }, []);
+
   const getActivePaperCutEditor = useCallback(() => {
-    return activeEditorId ? editorsRef.current[activeEditorId] || null : null;
+    if (!activeEditorId) return null;
+    return editorsRef.current[activeEditorId] || null;
   }, [activeEditorId]);
 
+  const hasActiveEditor = useCallback(() => {
+    return activeEditorId !== null && editorsRef.current[activeEditorId] !== undefined;
+  }, [activeEditorId]);
+
+  const addToPaperCut = useCallback((content: string) => {
+    const activeEditor = getActivePaperCutEditor();
+    if (activeEditor) {
+      activeEditor.addContentAtEnd(content);
+    }
+  }, [getActivePaperCutEditor]);
+
+  const insertIntoPaperCut = useCallback((content: string) => {
+    const activeEditor = getActivePaperCutEditor();
+    if (activeEditor) {
+      activeEditor.addContentAtCursor(content);
+    }
+  }, [getActivePaperCutEditor]);
+
   return (
-    <ActiveEditorContext.Provider 
-      value={{ 
-        activeEditorId, 
-        setActiveEditor, 
+    <ActiveEditorContext.Provider
+      value={{
+        activeEditorId,
+        editors: editorsRef.current,
+        setActiveEditor: setActiveEditorId,
+        registerEditor,
+        unregisterEditor,
         getActivePaperCutEditor,
-        registerEditor
+        hasActiveEditor,
+        addToPaperCut,
+        insertIntoPaperCut,
       }}
     >
       {children}
@@ -45,10 +81,21 @@ export const ActiveEditorProvider: React.FC<ActiveEditorProviderProps> = ({ chil
   );
 };
 
-export const useActiveEditor = () => {
-  const context = useContext(ActiveEditorContext);
-  if (context === undefined) {
-    throw new Error('useActiveEditor must be used within an ActiveEditorProvider');
-  }
-  return context;
+export const useActiveEditor = () => useContext(ActiveEditorContext);
+
+// Optional: Utility hook for components that only need papercut operations
+export const usePaperCutOperations = () => {
+  const { 
+    getActivePaperCutEditor, 
+    hasActiveEditor, 
+    addToPaperCut, 
+    insertIntoPaperCut 
+  } = useActiveEditor();
+  
+  return { 
+    getActivePaperCutEditor, 
+    hasActiveEditor, 
+    addToPaperCut, 
+    insertIntoPaperCut 
+  };
 };

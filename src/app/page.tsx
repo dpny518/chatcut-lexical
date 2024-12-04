@@ -7,26 +7,23 @@ import { useFormattedWords } from '@/app/contexts/FormattedWordsContext';
 
 export default function App() {
   return (
-    <div className="flex h-screen bg-background">
-      {/* Left Panel - keep current size */}
-      <aside className="w-64 border-r border-border bg-card/50 flex-shrink-0">
-        <LeftPanel />
-      </aside>
-
-      {/* Center Panel - adjust max-width */}
-      <main className="flex-1 flex flex-col overflow-hidden max-w-4xl">
-        <header className="border-b border-border p-4 bg-card/50 flex items-center justify-between">
-          <h1 className="text-lg font-semibold text-foreground">Source</h1>
-        </header>
-        <div className="flex-1 overflow-auto bg-background">
-          <CenterPanel />
-        </div>
-      </main>
-
-      {/* Right Panel - much wider */}
-      <aside className="w-[600px] border-l border-border bg-card/50 flex-shrink-0">  
-         <RightPanel />
-      </aside>
-    </div>
+    <div className="flex h-screen bg-black text-gray-200 font-sans">
+    {/* Left Panel */}
+    <aside className="w-64 bg-gray-900 flex-shrink-0 p-4">
+      <LeftPanel />
+    </aside>
+  
+    {/* Center Panel */}
+    <main className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 overflow-y-auto p-4">
+        <CenterPanel />
+      </div>
+    </main>
+  
+    {/* Right Panel */}
+    <aside className="w-[500px] bg-gray-900 flex-shrink-0 p-4">
+      <RightPanel />
+    </aside>
+  </div>
   );
 }
