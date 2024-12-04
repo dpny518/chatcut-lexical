@@ -76,3 +76,8 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
+  .hide-text-cursor {
+    cursor: text;
+    caret-color: transparent;
+  }

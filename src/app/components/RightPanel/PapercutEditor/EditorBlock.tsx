@@ -1,11 +1,11 @@
 "use client"
 
 import React, { memo, useState, useCallback, useRef, useEffect } from 'react';
-import { GripHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Block, SpeakerColor, CursorPosition, ContentItem } from '@/app/types/papercut';
 import { formatWordMetadata } from '@/app/utils/papercut-clipboard';
 import '@/styles/papercutEditor.css';
+import { GripHorizontal, Trash2 } from "lucide-react";
 
 interface EditorBlockProps {
   block: Block;
@@ -18,6 +18,7 @@ interface EditorBlockProps {
   isDragging: boolean;
   isDropTarget: boolean;
   dropPosition: 'above' | 'below' | null;
+  onDeleteBlock: (blockId: string) => void;
 }
 
 
@@ -31,7 +32,8 @@ export const EditorBlock = memo(({
     onDragOver,
     isDragging,
     isDropTarget,
-    dropPosition
+    dropPosition,
+    onDeleteBlock
   }: EditorBlockProps) => {
   const [tooltipContent, setTooltipContent] = useState<string | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
@@ -87,11 +89,13 @@ export const EditorBlock = memo(({
     <div 
       ref={blockRef} 
       className={cn(
-        "relative",
+        "relative group",
         isDragging && "opacity-50",
         isDropTarget && "z-10"
       )}
-      draggable
+      draggable="true"
+      aria-roledescription="draggable item"
+      aria-selected={isDragging}
       onDragStart={() => onDragStart(block.id)}
       onDragEnd={onDragEnd}
       onDragOver={(e) => {
@@ -105,47 +109,76 @@ export const EditorBlock = memo(({
       }}
     >
       {isDropTarget && dropPosition === 'above' && (
-        <div className="absolute top-0 left-0 right-0 h-1 bg-blue-500" />
+        <div className="absolute top-0 left-0 right-0 h-1 bg-blue-500" aria-hidden="true" />
       )}
       <div 
         data-block={block.id}
-        className="block speaker"
+        className="block speaker relative"
         style={cssProperties}
         suppressContentEditableWarning
       >
         <div className="absolute left-0 top-1/2 -translate-y-1/2 -ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <GripHorizontal className="w-4 h-4 text-muted-foreground" />
+          <GripHorizontal className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
+        </div>
+        <div className="absolute right-0 top-1/2 -translate-y-1/2 mr-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button
+            onClick={() => onDeleteBlock(block.id)}
+            className="p-1 rounded-full hover:bg-red-500 hover:text-white transition-colors"
+            aria-label={`Delete block for Speaker ${block.speaker}`}
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
         </div>
         <div className="px-3 py-2">
           <h3 className="speaker-text mb-2 select-none font-medium text-sm">
             Speaker {block.speaker}
           </h3>
-          <div className="leading-relaxed text-sm font-mono">
-            {block.items.map((item, index) => (
-              <span
-                key={`${item.word}-${index}`}
-                data-word-metadata={formatWordMetadata(item)}
-                data-word-index={index}
-                data-speaker={item.speaker}
-                data-segment-id={item.segmentId}
-                onClick={() => onWordClick(block.id, index)}
-                onMouseEnter={(e) => handleWordMouseEnter(e, item)}
-                onMouseLeave={handleWordMouseLeave}
-                className={cn(
-                  "word",
-                  "relative inline-flex items-center px-2 py-1 m-0.5 rounded select-text"
-                )}
-              >
-                {item.word}
-                {cursorPosition?.blockId === block.id && 
-                cursorPosition?.wordIndex === index && (
-                  <span className="inline-block w-0.5 h-4 bg-sky-500 animate-pulse ml-0.5" />
-                )}
-              </span>
-            ))}
+          <div className="leading-relaxed text-sm font-mono" role="list">
+          {block.items.map((item, index) => (
+                    <span
+                        key={`${item.word}-${index}`}
+                        data-word-metadata={formatWordMetadata(item)}
+                        data-word-index={index}
+                        data-speaker={item.speaker}
+                        data-segment-id={item.segmentId}
+                        onClick={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const clickX = e.clientX - rect.left;
+                        const newWordIndex = clickX > rect.width / 2 ? index + 1 : index;
+                        onWordClick(block.id, newWordIndex);
+                        }}
+                        onMouseEnter={(e) => handleWordMouseEnter(e, item)}
+                        onMouseLeave={handleWordMouseLeave}
+                        className={cn(
+                        "word",
+                        "relative inline-flex items-center px-2 py-1 m-0.5 rounded select-text"
+                        )}
+                        role="listitem"
+                        tabIndex={0}
+                        aria-label={`${item.word} (Speaker ${item.speaker})`}
+                    >
+                        {item.word}
+                        {(cursorPosition?.blockId === block.id && 
+                        cursorPosition?.wordIndex === index) && (
+                        <span className="absolute left-0 top-0 bottom-0 w-0.5 bg-sky-500 animate-pulse" aria-hidden="true" />
+                        )}
+                        {(cursorPosition?.blockId === block.id && 
+                        cursorPosition?.wordIndex === index + 1) && (
+                        <span className="absolute right-0 top-0 bottom-0 w-0.5 bg-sky-500 animate-pulse" aria-hidden="true" />
+                        )}
+                    </span>
+                    ))}
+                    {cursorPosition?.blockId === block.id && 
+                    cursorPosition?.wordIndex === block.items.length && (
+                    <span className="inline-block w-0.5 h-full bg-sky-500 animate-pulse ml-0.5" aria-hidden="true" />
+                    )}
             {cursorPosition?.blockId === block.id && 
             cursorPosition?.wordIndex === block.items.length && (
-              <span className="inline-block w-0.5 h-4 bg-sky-500 animate-pulse ml-0.5" />
+            <span className="inline-block w-0.5 h-4 bg-sky-500 animate-pulse ml-0.5" aria-hidden="true" />
+            )}
+            {cursorPosition?.blockId === block.id && 
+            cursorPosition?.wordIndex === block.items.length && (
+              <span className="inline-block w-0.5 h-4 bg-sky-500 animate-pulse ml-0.5" aria-hidden="true" />
             )}
           </div>
         </div>
@@ -164,6 +197,7 @@ export const EditorBlock = memo(({
             transform: 'translate(-50%, 8px)',
             maxWidth: '300px'
           }}
+          role="tooltip"
         >
           <pre className="font-mono whitespace-pre-wrap">
             {tooltipContent}
