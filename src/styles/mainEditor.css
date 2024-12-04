@@ -1,7 +1,7 @@
 /* Base container */
 .editor-container {
   @apply w-full relative;
-  background-color: #0F0F0F; /* Matched darker background */
+  background-color: #0F0F0F;
 }
 
 .editor-inner {
@@ -10,62 +10,52 @@
 }
 
 .editor-input {
-  @apply resize-none outline-none font-mono;
+  @apply resize-none outline-none;
   background-color: #0F0F0F;
-  color: rgba(255, 255, 255, 0.95); /* Slightly off-white text */
+  color: #E1E1E1;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 14px;
   letter-spacing: 0.05em;
   word-spacing: 0.5em;
+  line-height: 1.6;
 }
 
-/* Speaker styling - exact match to blue in screenshot */
-/* Speaker styling */
-.editor-speaker {
-  color: #4BA2FF !important;
-  font-weight: 400;
-  font-size: 16px;
-}
-
-/* Timestamp styling */
+/* Timestamp and speaker line */
 .editor-timestamp {
   color: #666666;
-  font-family: monospace;
+  font-family: ui-monospace, monospace;
   font-size: 14px;
 }
 
-/* Speaker line container */
-.editor-speaker-line {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
+.editor-speaker {
+  color: #4BA2FF;
+  font-weight: normal;
+}
+
+/* Add colon after speaker name */
+.editor-speaker::after {
+  content: ":";
+  color: #4BA2FF;
+}
+
+/* Individual segments/paragraphs */
+.editor-paragraph {
+  margin: 24px 0;
+  padding-left: 0;
 }
 
 /* Text content */
 [data-lexical-text] {
-  color: rgba(255, 255, 255, 0.95);
-  font-size: 16px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 14px;
   line-height: 1.6;
   letter-spacing: 0.05em;
   word-spacing: 0.5em;
 }
 
-/* Selected/highlighted words */
-[data-word-metadata] {
-  padding: 2px 4px;
-  border-radius: 2px;
-  margin: 0 2px;
-  transition: background-color 0.15s ease;
-}
-
 /* Selection styling */
 ::selection {
-  background-color: rgba(138, 180, 248, 0.25);
-}
-
-/* Font settings */
-.editor-input, 
-[data-lexical-text] {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  background-color: rgba(94, 165, 255, 0.2);
 }
 
 /* Hide scrollbar */
@@ -76,4 +66,15 @@
 
 .editor-inner::-webkit-scrollbar {
   display: none;
+}
+
+/* Toolbar styling */
+.editor-toolbar {
+  @apply fixed bottom-0 left-[16rem] right-[600px] border-t border-[#2A2A2A] bg-[#0F0F0F]/80 backdrop-blur;
+  padding: 8px 16px;
+}
+
+/* File indicator */
+.editor-file-indicator {
+  @apply flex items-center gap-2 px-4 py-2 bg-[#161616] border-b border-[#2A2A2A];
 }
