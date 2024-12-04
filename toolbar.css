@@ -1,0 +1,50 @@
+.toolbar {
+  display: flex;
+  margin-bottom: 1px;
+  background: var(--toolbar-bg);
+  padding: 4px;
+  vertical-align: middle;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  overflow: auto;
+}
+
+/* Text formatting classes */
+.editor-text-bold {
+  font-weight: bold;
+}
+
+.editor-text-italic {
+  font-style: italic;
+}
+
+.editor-text-underline {
+  text-decoration: underline;
+}
+
+.editor-text-strikethrough {
+  text-decoration: line-through;
+}
+
+.editor-text-underlineStrikethrough {
+  text-decoration: underline line-through;
+}
+
+/* You might want to add styles for toolbar buttons */
+.toolbar button {
+  background: transparent;
+  border: none;
+  color: var(--editor-text);
+  margin: 0 5px;
+  padding: 5px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.toolbar button:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.toolbar button.active {
+  background: rgba(255, 255, 255, 0.2);
+}

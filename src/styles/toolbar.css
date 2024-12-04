@@ -1,0 +1,72 @@
+.toolbar {
+    display: flex;
+    margin-bottom: 1px;
+    background: #1e1e1e; /* Dark background */
+    color: #e0e0e0; /* Light text color */
+    padding: 4px;
+    vertical-align: middle;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    overflow: auto;
+    border: 1px solid #333; /* Subtle border */
+}
+
+/* Text formatting classes */
+.editor-text-bold {
+    font-weight: bold;
+    color: #ffffff; /* Brighter white for bold text */
+}
+
+.editor-text-italic {
+    font-style: italic;
+}
+
+.editor-text-underline {
+    text-decoration: underline;
+}
+
+.editor-text-strikethrough {
+    text-decoration: line-through;
+}
+
+.editor-text-underlineStrikethrough {
+    text-decoration: underline line-through;
+}
+
+/* Additional styles for better visibility in dark mode */
+.toolbar button {
+    background-color: #2a2a2a;
+    color: #e0e0e0;
+    border: none;
+    padding: 5px 10px;
+    margin: 0 2px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.toolbar button:hover {
+    background-color: #3a3a3a;
+}
+
+.toolbar button:active {
+    background-color: #4a4a4a;
+}
+
+/* For active state of buttons */
+.toolbar button.active {
+    background-color: #4a4a4a;
+    color: #ffffff;
+}
+
+/* If you have any icons, ensure they're visible */
+.toolbar svg {
+    fill: #e0e0e0;
+}
+
+/* For any dividers in the toolbar */
+.toolbar .divider {
+    width: 1px;
+    background-color: #444;
+    margin: 0 5px;
+}
