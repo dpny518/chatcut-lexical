@@ -178,21 +178,27 @@ def get_extraction_function(first_page_content):
     Create a Python function named 'extract_speaker_and_text' that takes a single 'line' parameter and returns a tuple of (speaker, timestamp, text).
 
     Requirements:
-    1. Handle multiple formats, including:
+    1. The function should be properly indented with 4 spaces.
+    2. Do not include 'import re' in the function body.
+    3. Handle multiple formats, including:
        a. Chinese format: '说话人1 00:00 Text'
        b. English format with speaker names: 'Interviewer: 01:01 Text'
        c. English format with asterisks: '**Speaker:** 00:00 Text'
        d. Format without timestamps: '**Speaker:** Text' or 'Speaker: Text'
-    2. If no speaker is found, return (None, None, line.strip()).
-    3. If no timestamp is present, return None for the timestamp.
-    4. Use regular expressions (re module) for pattern matching.
-    5. Implement the function to be robust and handle variations in spacing and formatting.
-    6. Ensure the function cleans up any extra whitespace or special characters.
-    7. The function should prioritize matching the most specific patterns first.
-    8. Include the 'import re' statement at the beginning of the function.
+    4. If no speaker is found, return (None, None, line.strip()).
+    5. If no timestamp is present, return None for the timestamp.
+    6. Use regular expressions (re module) for pattern matching.
+    7. Implement the function to be robust and handle variations in spacing and formatting.
+    8. Ensure the function cleans up any extra whitespace or special characters.
+    9. The function should prioritize matching the most specific patterns first.
+
+    Here's the content to base the function on:
+
+    {first_page_content}
 
     Provide only the Python code for the function, without any explanations. The function should be efficient and handle all the cases present in the given content.
     """
+
 
     system_content = "You are a helpful assistant designed to output JSON. Provide the Python function as a string value for the 'function' key in the JSON response. The function should handle various formats of speaker identification and timestamps."
     user_content = prompt
