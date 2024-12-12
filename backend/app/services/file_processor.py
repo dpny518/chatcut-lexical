@@ -32,7 +32,7 @@ async def process_file(file: UploadFile, user_id: str):
         elif file.filename.endswith('.json'):
             logger.info("Using JSON parser")
             parsed = await json_handler.parse(file_content)
-        elif file.filename.endswith('.srtx'):
+        elif file.filename.endswith('.srtx') or file.filename.endswith('.srt'):
             logger.info("Using SRTX parser")
             parsed = await srtx_handler.parse(file_content)
         else:
