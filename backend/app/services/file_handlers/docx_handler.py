@@ -125,3 +125,6 @@ async def parse_to_schema(content: bytes) -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"Error parsing DOCX content: {str(e)}")
         raise ValueError(f"Error parsing DOCX content: {str(e)}")
+
+# Expose the parse_to_schema function at module level
+__all__ = ['parse_to_schema']
