@@ -1,17 +1,48 @@
 from docx import Document
 import re
 import io
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional, Union, Tuple
 import logging
+import uuid
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
-def extract_time(text: str) -> float:
-    """Extract time from format like '00:00' or '00:00:00' and convert to seconds"""
-    if not text:
+def is_chinese_char(char: str) -> bool:
+    """Check if a character is Chinese"""
+    return '\u4e00' <= char <= '\u9fff'
+
+def split_into_words(text: str) -> List[str]:
+    """
+    Split text into words, treating Chinese characters as individual words
+    and keeping English words intact
+    """
+    words = []
+    current_word = ''
+    
+    for char in text:
+        if is_chinese_char(char):
+            # If we have accumulated non-Chinese characters, add them as a word
+            if current_word:
+                words.extend(current_word.split())
+                current_word = ''
+            # Add Chinese character as its own word
+            words.append(char)
+        else:
+            current_word += char
+    
+    # Add any remaining non-Chinese words
+    if current_word:
+        words.extend(current_word.split())
+    
+    return words
+
+def timestamp_to_seconds(timestamp: str) -> float:
+    """Convert timestamp to seconds"""
+    if not timestamp:
         return 0.0
     
-    time_match = re.search(r'(\d{2}):(\d{2})(?::(\d{2}))?', text)
+    time_match = re.search(r'(\d{2}):(\d{2})(?::(\d{2}))?', timestamp)
     if time_match:
         hours = 0
         if time_match.group(3):  # HH:MM:SS format
@@ -25,21 +56,26 @@ def extract_time(text: str) -> float:
         return float(hours * 3600 + minutes * 60 + seconds)
     return 0.0
 
-def clean_speaker_name(text: str) -> str:
-    """Clean speaker name by removing special characters and timestamps"""
+def clean_text(text: str) -> str:
+    """Remove markdown-style formatting and clean text"""
+    # Remove ** markers
+    text = re.sub(r'\*\*|\*', '', text)
     # Remove timestamps
     text = re.sub(r'\d{2}:\d{2}(?::\d{2})?', '', text)
-    # Remove asterisks
-    text = text.replace('*', '')
-    # Remove leading/trailing whitespace
-    text = text.strip()
-    # Remove trailing colon if present
-    text = text.rstrip(':')
-    return text.replace(' ', '-')
+    # Clean extra whitespace
+    return ' '.join(text.split()).strip()
 
-def parse_segment(text: str) -> tuple[str | None, str, float]:
+def hyphenate_speaker_name(name: str) -> str:
+    """Replace spaces in speaker names with hyphens"""
+    if not name:
+        return name
+    
+    # Remove trailing colon if present
+    name = name.rstrip(':')
+    return name.replace(' ', '-')
+
+def parse_segment(text: str) -> Tuple[Optional[str], str, float]:
     """Parse a segment of text to extract speaker and content"""
-    # Match different speaker patterns
     speaker_patterns = [
         r'\*\*(.*?)\*\*[:\s]*(\d{2}:\d{2}(?::\d{2})?)?',  # **Speaker Name** 00:00
         r'(说话人\d+)\s+(\d{2}:\d{2}(?::\d{2})?)',        # 说话人1 00:00
@@ -49,12 +85,12 @@ def parse_segment(text: str) -> tuple[str | None, str, float]:
     for pattern in speaker_patterns:
         match = re.match(pattern, text)
         if match:
-            speaker = clean_speaker_name(match.group(1))
-            # Get the remaining text after the speaker/time pattern
-            content = text[match.end():].strip()
+            speaker = hyphenate_speaker_name(match.group(1))
             # Extract time if present
             time_str = match.group(2) if len(match.groups()) > 1 else None
-            start_time = extract_time(time_str)
+            start_time = timestamp_to_seconds(time_str)
+            # Get the remaining text after the speaker/time pattern
+            content = text[match.end():].strip()
             return speaker, content, start_time
             
     return None, text.strip(), 0.0
@@ -67,9 +103,8 @@ async def parse_to_schema(content: bytes) -> Dict[str, Any]:
         doc = Document(doc_stream)
         
         segments = []
-        current_time = 0.0
-        last_speaker = None
-        current_text = []
+        current_segment = None
+        segment_index = 1
         
         for para in doc.paragraphs:
             text = para.text.strip()
@@ -79,48 +114,73 @@ async def parse_to_schema(content: bytes) -> Dict[str, Any]:
             speaker, content, start_time = parse_segment(text)
             
             if speaker:
-                # If we have accumulated text for previous speaker, save it
-                if current_text and last_speaker:
-                    segments.append({
-                        "index": len(segments) + 1,
-                        "start_time": current_time,
-                        "end_time": start_time if start_time else current_time + 30.0,
-                        "text": " ".join(current_text),
-                        "speaker": last_speaker,
-                        "words": []  # Word-level timing not available in DOCX
-                    })
-                    
-                current_text = [content] if content else []
-                last_speaker = speaker
-                if start_time > 0:
-                    current_time = start_time
+                # Save previous segment if it exists
+                if current_segment:
+                    segments.append(current_segment)
+                
+                # Clean the content
+                cleaned_text = clean_text(content)
+                # Split into words, handling Chinese characters
+                words = split_into_words(cleaned_text)
+                
+                # Start new segment
+                current_segment = {
+                    "index": segment_index,
+                    "start_time": start_time,
+                    "end_time": None,  # Will be set later
+                    "text": cleaned_text,
+                    "speaker": speaker,
+                    "words": [{"start": -1, "end": -1, "word": word} for word in words]
+                }
+                segment_index += 1
+            elif current_segment:
+                # Append text to current segment
+                cleaned_text = clean_text(text)
+                if cleaned_text:
+                    current_segment["text"] += " " + cleaned_text
+                    # Split additional text into words, handling Chinese characters
+                    words = split_into_words(cleaned_text)
+                    current_segment["words"].extend([
+                        {"start": -1, "end": -1, "word": word}
+                        for word in words
+                    ])
+        
+        # Add the last segment
+        if current_segment:
+            segments.append(current_segment)
+            
+        # Set end times
+        for i, segment in enumerate(segments):
+            if i < len(segments) - 1:
+                # Set end time based on next segment's start time
+                segment["end_time"] = segments[i + 1]["start_time"]
             else:
-                # Append to current speaker's text if exists
-                if last_speaker and text:
-                    current_text.append(text)
-        
-        # Add final segment
-        if current_text and last_speaker:
-            segments.append({
-                "index": len(segments) + 1,
-                "start_time": current_time,
-                "end_time": current_time + 30.0,  # Estimate for last segment
-                "text": " ".join(current_text),
-                "speaker": last_speaker,
-                "words": []
-            })
+                # For the last segment, add 60 seconds
+                segment["end_time"] = segment["start_time"] + 60.0
 
-        logger.info(f"Parsed {len(segments)} segments from DOCX")
+        # Generate project structure
+        project_id = str(uuid.uuid4())
+        media_id = str(uuid.uuid4())
+        uploaded_on = datetime.utcnow().isoformat() + "Z"
         
-        # Return segments only - project structure will be created by create_project_structure
-        return {
+        total_duration = segments[-1]["end_time"] if segments else 0
+
+        parsed_data = {
+            "project_id": project_id,
+            "media": {
+                "id": media_id,
+                "source": "document.docx",
+                "duration": total_duration,
+                "uploaded_on": uploaded_on
+            },
             "transcript": {
                 "segments": segments
             },
-            "media": {
-                "duration": segments[-1]["end_time"] if segments else 0
-            }
+            "edits": []
         }
+
+        logger.info(f"Successfully parsed {len(segments)} segments from DOCX")
+        return parsed_data
 
     except Exception as e:
         logger.error(f"Error parsing DOCX content: {str(e)}")
