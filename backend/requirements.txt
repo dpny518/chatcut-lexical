@@ -6,3 +6,5 @@ python-docx
 pydantic
 openai
 requests
+python-docx 
+regex
