@@ -1,17 +1,15 @@
-import json
-import uuid
-from datetime import datetime
-import re
 from docx import Document
-import regex  # For better Unicode support
+import re
+import io
+from typing import List, Dict, Any
+import logging
 
-def extract_time(text):
-    """
-    Extract time from format like '00:00' or '00:00:00'
-    Returns time in seconds
-    """
+logger = logging.getLogger(__name__)
+
+def extract_time(text: str) -> float:
+    """Extract time from format like '00:00' or '00:00:00' and convert to seconds"""
     if not text:
-        return None
+        return 0.0
     
     time_match = re.search(r'(\d{2}):(\d{2})(?::(\d{2}))?', text)
     if time_match:
@@ -24,13 +22,11 @@ def extract_time(text):
             minutes = int(time_match.group(1))
             seconds = int(time_match.group(2))
         
-        return hours * 3600 + minutes * 60 + seconds
-    return None
+        return float(hours * 3600 + minutes * 60 + seconds)
+    return 0.0
 
-def clean_speaker_name(text):
-    """
-    Clean speaker name by removing special characters and timestamps
-    """
+def clean_speaker_name(text: str) -> str:
+    """Clean speaker name by removing special characters and timestamps"""
     # Remove timestamps
     text = re.sub(r'\d{2}:\d{2}(?::\d{2})?', '', text)
     # Remove asterisks
@@ -39,16 +35,15 @@ def clean_speaker_name(text):
     text = text.strip()
     # Remove trailing colon if present
     text = text.rstrip(':')
-    return text
+    return text.replace(' ', '-')
 
-def parse_segment(text):
-    """
-    Parse a segment of text to extract speaker and content
-    """
-    # Match bold text patterns (between ** or after speaker identifier)
+def parse_segment(text: str) -> tuple[str | None, str, float]:
+    """Parse a segment of text to extract speaker and content"""
+    # Match different speaker patterns
     speaker_patterns = [
         r'\*\*(.*?)\*\*[:\s]*(\d{2}:\d{2}(?::\d{2})?)?',  # **Speaker Name** 00:00
-        r'(说话人\d+)\s+(\d{2}:\d{2}(?::\d{2})?)',  # 说话人1 00:00
+        r'(说话人\d+)\s+(\d{2}:\d{2}(?::\d{2})?)',        # 说话人1 00:00
+        r'^([^:]+?):\s*(\d{2}:\d{2}(?::\d{2})?)?'         # Speaker: 00:00
     ]
     
     for pattern in speaker_patterns:
@@ -62,83 +57,71 @@ def parse_segment(text):
             start_time = extract_time(time_str)
             return speaker, content, start_time
             
-    return None, text, None
+    return None, text.strip(), 0.0
 
-def parse_docx(file_path):
-    """
-    Parse DOCX file and convert to required JSON format
-    """
-    doc = Document(file_path)
-    segments = []
-    current_time = 0
-    last_speaker = None
-    
-    # Join paragraphs with same speaker
-    current_text = []
-    
-    for para in doc.paragraphs:
-        text = para.text.strip()
-        if not text:
-            continue
-            
-        speaker, content, start_time = parse_segment(text)
-        
-        if speaker:
-            # If we have accumulated text for previous speaker, save it
-            if current_text and last_speaker:
-                segments.append({
-                    "index": len(segments) + 1,
-                    "start_time": current_time,
-                    "end_time": start_time if start_time else current_time + 30,  # estimate if no end time
-                    "text": " ".join(current_text),
-                    "speaker": last_speaker.replace(" ", "-"),
-                    "words": []  # We don't have word-level timing
-                })
-                
-            current_text = [content] if content else []
-            last_speaker = speaker
-            if start_time is not None:
-                current_time = start_time
-        else:
-            # Append to current speaker's text if exists
-            if last_speaker and text:
-                current_text.append(text)
-    
-    # Add final segment
-    if current_text and last_speaker:
-        segments.append({
-            "index": len(segments) + 1,
-            "start_time": current_time,
-            "end_time": current_time + 30,  # estimate for last segment
-            "text": " ".join(current_text),
-            "speaker": last_speaker.replace(" ", "-"),
-            "words": []
-        })
-
-    # Create final output structure
-    project_id = str(uuid.uuid4())
-    media_id = str(uuid.uuid4())
-    uploaded_on = datetime.utcnow().isoformat() + "Z"
-    
-    total_duration = segments[-1]['end_time'] if segments else 0
-    
-    return {
-        "project_id": project_id,
-        "media": {
-            "id": media_id,
-            "source": file_path,
-            "duration": total_duration,
-            "uploaded_on": uploaded_on
-        },
-        "transcript": {
-            "segments": segments
-        },
-        "edits": []
-    }
-
-# Example usage
-async def parse(file_path):
+async def parse_to_schema(content: bytes) -> Dict[str, Any]:
+    """Parse DOCX content to transcript segments"""
     try:
-        return parse_docx(file_path)
+        # Create a BytesIO object from the content
+        doc_stream = io.BytesIO(content)
+        doc = Document(doc_stream)
+        
+        segments = []
+        current_time = 0.0
+        last_speaker = None
+        current_text = []
+        
+        for para in doc.paragraphs:
+            text = para.text.strip()
+            if not text:
+                continue
+                
+            speaker, content, start_time = parse_segment(text)
+            
+            if speaker:
+                # If we have accumulated text for previous speaker, save it
+                if current_text and last_speaker:
+                    segments.append({
+                        "index": len(segments) + 1,
+                        "start_time": current_time,
+                        "end_time": start_time if start_time else current_time + 30.0,
+                        "text": " ".join(current_text),
+                        "speaker": last_speaker,
+                        "words": []  # Word-level timing not available in DOCX
+                    })
+                    
+                current_text = [content] if content else []
+                last_speaker = speaker
+                if start_time > 0:
+                    current_time = start_time
+            else:
+                # Append to current speaker's text if exists
+                if last_speaker and text:
+                    current_text.append(text)
+        
+        # Add final segment
+        if current_text and last_speaker:
+            segments.append({
+                "index": len(segments) + 1,
+                "start_time": current_time,
+                "end_time": current_time + 30.0,  # Estimate for last segment
+                "text": " ".join(current_text),
+                "speaker": last_speaker,
+                "words": []
+            })
+
+        logger.info(f"Parsed {len(segments)} segments from DOCX")
+        
+        # Return segments only - project structure will be created by create_project_structure
+        return {
+            "transcript": {
+                "segments": segments
+            },
+            "media": {
+                "duration": segments[-1]["end_time"] if segments else 0
+            }
+        }
+
     except Exception as e:
-        raise ValueError(f"Error parsing DOCX file: {str(e)}")
+        logger.error(f"Error parsing DOCX content: {str(e)}")
+        raise ValueError(f"Error parsing DOCX content: {str(e)}")
