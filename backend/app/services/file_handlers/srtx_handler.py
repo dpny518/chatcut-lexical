@@ -1,10 +1,34 @@
 import re
 from datetime import timedelta
 import logging
+from typing import List, Dict, Any, Union
 
 logger = logging.getLogger(__name__)
 
-def hyphenate_speaker_name(name):
+def is_chinese_char(char: str) -> bool:
+    """Check if a character is Chinese"""
+    return '\u4e00' <= char <= '\u9fff'
+
+def split_into_words(text: str) -> List[str]:
+    """Split text into words, treating Chinese characters as individual words"""
+    words = []
+    current_word = ''
+    
+    for char in text:
+        if is_chinese_char(char):
+            if current_word:
+                words.extend(current_word.split())
+                current_word = ''
+            words.append(char)
+        else:
+            current_word += char
+    
+    if current_word:
+        words.extend(current_word.split())
+    
+    return words
+
+def hyphenate_speaker_name(name: str) -> str:
     """
     Replace spaces in speaker names with hyphens.
     Also handles cases with colons and other potential formatting.
@@ -24,12 +48,12 @@ def hyphenate_speaker_name(name):
     # Replace spaces with hyphens
     return name.replace(' ', '-')
 
-def parse_time(time_str):
+def parse_time(time_str: str) -> timedelta:
     hours, minutes, seconds_ms = time_str.split(':')
     seconds, milliseconds = seconds_ms.split(',')
     return timedelta(hours=int(hours), minutes=int(minutes), seconds=int(seconds), milliseconds=int(milliseconds))
 
-async def parse(content):
+async def parse(content: Union[str, bytes]) -> List[Dict[str, Any]]:
     logger.info("Starting SRTX parsing")
     
     if isinstance(content, str):
@@ -55,7 +79,8 @@ async def parse(content):
         # Hyphenate speaker name
         speaker = hyphenate_speaker_name(speaker)
         
-        words = text.split()
+        # Split text into words, treating Chinese characters as individual words
+        words = split_into_words(text)
         word_list = []
         
         for word in words:

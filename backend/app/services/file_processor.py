@@ -1,5 +1,5 @@
 from fastapi import UploadFile, HTTPException
-from app.services.file_handlers import image_handler, docx_handler, txt_handler, json_handler, srtx_handler
+from app.services.file_handlers import image_handler, docx_handler, txt_handler, json_handler,srt_handler,srtx_handler
 from app.services.storage_handler import save_uploaded_file, save_processed_file
 from datetime import datetime
 import uuid
@@ -32,9 +32,12 @@ async def process_file(file: UploadFile, user_id: str):
         elif file.filename.endswith('.json'):
             logger.info("Using JSON parser")
             parsed = await json_handler.parse(file_content)
-        elif file.filename.endswith('.srtx') or file.filename.endswith('.srt'):
+        elif file.filename.endswith('.srtx'):
             logger.info("Using SRTX parser")
             parsed = await srtx_handler.parse(file_content)
+       elif file.filename.endswith('.srt'):
+            logger.info("Using SRT parser")
+            parsed = await srt_handler.parse_srt(file_content)
         else:
             logger.error(f"Unsupported file type: {file.filename}")
             raise ValueError(f"Unsupported file type: {file.filename}")
