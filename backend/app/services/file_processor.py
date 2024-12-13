@@ -35,7 +35,7 @@ async def process_file(file: UploadFile, user_id: str):
         elif file.filename.endswith('.srtx'):
             logger.info("Using SRTX parser")
             parsed = await srtx_handler.parse(file_content)
-       elif file.filename.endswith('.srt'):
+        elif file.filename.endswith('.srt'):
             logger.info("Using SRT parser")
             parsed = await srt_handler.parse_srt(file_content)
         else:

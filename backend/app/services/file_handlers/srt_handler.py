@@ -1,8 +1,8 @@
 import re
-from datetime import timedelta
-import logging
+import uuid
+from datetime import datetime
 from typing import List, Dict, Any, Union
-
+import logging
 logger = logging.getLogger(__name__)
 
 def is_chinese_char(char: str) -> bool:
@@ -28,12 +28,13 @@ def split_into_words(text: str) -> List[str]:
     
     return words
 
-def parse_time(time_str: str) -> timedelta:
+def parse_time(time_str: str) -> float:
+    """Convert SRT time format to seconds"""
     hours, minutes, seconds_ms = time_str.split(':')
     seconds, milliseconds = seconds_ms.split(',')
-    return timedelta(hours=int(hours), minutes=int(minutes), seconds=int(seconds), milliseconds=int(milliseconds))
+    return int(hours) * 3600 + int(minutes) * 60 + int(seconds) + int(milliseconds) / 1000
 
-async def parse_srt(content: Union[str, bytes]) -> List[Dict[str, Any]]:
+async def parse_srt(content: Union[str, bytes]) -> Dict[str, Any]:
     logger.info("Starting SRT parsing")
     
     if isinstance(content, str):
@@ -50,9 +51,10 @@ async def parse_srt(content: Union[str, bytes]) -> List[Dict[str, Any]]:
 
     logger.info(f"Found {len(matches)} matches in SRT content")
 
-    parsed_content = []
+    segments = []
+    unknown_counter = 1
     for index, match in enumerate(matches, start=1):
-        index, start_time, end_time, text = match
+        _, start_time, end_time, text = match
         start = parse_time(start_time)
         end = parse_time(end_time)
         
@@ -62,19 +64,36 @@ async def parse_srt(content: Union[str, bytes]) -> List[Dict[str, Any]]:
         
         for word in words:
             word_list.append({
-                "start": -1,  # Use -1 to indicate timing is not available
-                "end": -1,    # Use -1 to indicate timing is not available
+                "start": -1,
+                "end": -1,
                 "word": word
             })
         
-        parsed_content.append({
-            "index": int(index),
-            "start_time": start.total_seconds(),
-            "end_time": end.total_seconds(),
+        segments.append({
+            "index": index,
+            "start_time": start,
+            "end_time": end,
             "text": text.strip(),
-            "speaker": "UNKNOWN",  # Set speaker as UNKNOWN for all segments
+            "speaker": f"UNKNOWN-{unknown_counter}",
             "words": word_list
         })
+        unknown_counter += 1
 
-    logger.info(f"Parsed {len(parsed_content)} segments from SRT")
-    return parsed_content
+    total_duration = segments[-1]['end_time'] if segments else 0
+    
+    parsed_data = {
+        "project_id": str(uuid.uuid4()),
+        "media": {
+            "id": str(uuid.uuid4()),
+            "source": "ChineseSubtitletest.srt",
+            "duration": total_duration,
+            "uploaded_on": datetime.utcnow().isoformat() + "Z"
+        },
+        "transcript": {
+            "segments": segments
+        },
+        "edits": []
+    }
+
+    logger.info(f"Parsed {len(segments)} segments from SRT")
+    return parsed_data

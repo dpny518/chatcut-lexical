@@ -1,8 +1,8 @@
 import re
-from datetime import timedelta
-import logging
+import uuid
+from datetime import datetime, timedelta
 from typing import List, Dict, Any, Union
-
+import logging
 logger = logging.getLogger(__name__)
 
 def is_chinese_char(char: str) -> bool:
@@ -32,12 +32,6 @@ def hyphenate_speaker_name(name: str) -> str:
     """
     Replace spaces in speaker names with hyphens.
     Also handles cases with colons and other potential formatting.
-    
-    Args:
-        name (str): Original speaker name
-    
-    Returns:
-        str: Speaker name with spaces replaced by hyphens
     """
     if not name:
         return name
@@ -48,12 +42,13 @@ def hyphenate_speaker_name(name: str) -> str:
     # Replace spaces with hyphens
     return name.replace(' ', '-')
 
-def parse_time(time_str: str) -> timedelta:
+def parse_time(time_str: str) -> float:
+    """Convert SRT time format to seconds"""
     hours, minutes, seconds_ms = time_str.split(':')
     seconds, milliseconds = seconds_ms.split(',')
-    return timedelta(hours=int(hours), minutes=int(minutes), seconds=int(seconds), milliseconds=int(milliseconds))
+    return int(hours) * 3600 + int(minutes) * 60 + int(seconds) + int(milliseconds) / 1000
 
-async def parse(content: Union[str, bytes]) -> List[Dict[str, Any]]:
+async def parse(content: Union[str, bytes]) -> Dict[str, Any]:
     logger.info("Starting SRTX parsing")
     
     if isinstance(content, str):
@@ -70,9 +65,9 @@ async def parse(content: Union[str, bytes]) -> List[Dict[str, Any]]:
 
     logger.info(f"Found {len(matches)} matches in SRTX content")
 
-    parsed_content = []
+    segments = []
     for index, match in enumerate(matches, start=1):
-        index, start_time, end_time, speaker, text = match
+        _, start_time, end_time, speaker, text = match
         start = parse_time(start_time)
         end = parse_time(end_time)
         
@@ -90,14 +85,30 @@ async def parse(content: Union[str, bytes]) -> List[Dict[str, Any]]:
                 "word": word
             })
         
-        parsed_content.append({
+        segments.append({
             "index": int(index),
-            "start_time": start.total_seconds(),
-            "end_time": end.total_seconds(),
+            "start_time": start,
+            "end_time": end,
             "text": text.strip(),
             "speaker": speaker.strip(),
             "words": word_list
         })
 
-    logger.info(f"Parsed {len(parsed_content)} segments from SRTX")
-    return parsed_content
+    total_duration = segments[-1]['end_time'] if segments else 0
+    
+    parsed_data = {
+        "project_id": str(uuid.uuid4()),
+        "media": {
+            "id": str(uuid.uuid4()),
+            "source": "SRTX_file.srtx",
+            "duration": total_duration,
+            "uploaded_on": datetime.utcnow().isoformat() + "Z"
+        },
+        "transcript": {
+            "segments": segments
+        },
+        "edits": []
+    }
+
+    logger.info(f"Parsed {len(segments)} segments from SRTX")
+    return parsed_data
